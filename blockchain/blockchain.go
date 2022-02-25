@@ -1,6 +1,5 @@
 package blockchain
 
-
 type Blockchain struct {
 	Blocks []*Block
 }
@@ -19,4 +18,3 @@ func (bc *Blockchain) AddToBlockChain(data string) {
 	newBlock := CreateBlock(data, prevBlock.Hash)
 	bc.Blocks = append(bc.Blocks, newBlock)
 }
-

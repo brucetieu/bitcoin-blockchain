@@ -6,9 +6,9 @@ import (
 )
 
 type Block struct {
-	Data []byte
+	Data     []byte
 	PrevHash []byte
-	Hash []byte
+	Hash     []byte
 }
 
 func (b *Block) CreateHash() {
@@ -16,13 +16,12 @@ func (b *Block) CreateHash() {
 	hash := sha256.Sum256(joined)
 	b.Hash = hash[:]
 }
+
 func CreateBlock(data string, prevHash []byte) *Block {
 	newBlock := &Block{
-		Data: []byte(data),
+		Data:     []byte(data),
 		PrevHash: prevHash,
 	}
 	newBlock.CreateHash()
 	return newBlock
 }
-
-

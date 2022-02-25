@@ -9,7 +9,7 @@ import (
 
 func main() {
 	fmt.Println("Blockchain")
-	
+
 	bc := blockchain.NewBlockchain()
 	bc.AddToBlockChain("My first block")
 	bc.AddToBlockChain("My second block")
