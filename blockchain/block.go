@@ -24,3 +24,5 @@ func CreateBlock(data string, prevHash []byte) *Block {
 	newBlock.CreateHash()
 	return newBlock
 }
+
+
