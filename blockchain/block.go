@@ -5,14 +5,23 @@ import (
 	"crypto/sha256"
 	"github.com/brucetieu/blockchain/utils"
 	"time"
+	"encoding/json"
+	log "github.com/sirupsen/logrus"
 )
 
 type Block struct {
-	Timestamp int64
-	Data      []byte
-	PrevHash  []byte
-	Hash      []byte
-	Nounce    int64
+	Timestamp int64  `json:"timestamp,omitempty"`
+	Data      []byte  `json:"data,omitempty"`
+	PrevHash  []byte   `json:"prevHash,omitempty"`
+	Hash      []byte   `json:"hash,omitempty"`
+	Nounce    int64    `json:"nounce,omitempty"`
+}
+
+type customByte []byte
+
+func (cb *customByte) UnmarshalJSON(input []byte) error {
+    *cb = customByte(input)
+    return nil
 }
 
 // Take block fields, add them together, then sha256 on the joined result.
@@ -38,4 +47,22 @@ func CreateBlock(data string, prevHash []byte) *Block {
 	newBlock.Nounce = nounce
 	newBlock.Hash = hash
 	return newBlock
+}
+
+func (b *Block) Serialize() []byte{
+	byteStruct, err := json.Marshal(b)
+	if err != nil {
+		log.Error("Unable to marshal", err.Error())
+	}
+
+	return byteStruct
+}
+
+func Deserialize(data []byte) *Block {
+	var block Block
+	err := json.Unmarshal(data, &block)
+	if err != nil {
+		log.Error("Unable to unmarshal: ", err.Error())
+	}
+	return &block
 }
