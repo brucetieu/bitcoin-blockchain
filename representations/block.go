@@ -7,3 +7,7 @@ type Block struct {
 	Hash      []byte   `json:"hash,omitempty"`
 	Nounce    int64    `json:"nounce,omitempty"`
 }
+
+type CreateBlockInput struct {
+	Data string `json:"data" binding:"required"`
+}
