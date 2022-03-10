@@ -1,14 +1,11 @@
 package services
 
 import (
-	// "github.com/brucetieu/blockchain/db"
 	"fmt"
 
 	"github.com/brucetieu/blockchain/repository"
 	"github.com/brucetieu/blockchain/representations"
 
-	// "github.com/brucetieu/blockchain/representations"
-	// badger "github.com/dgraph-io/badger/v3"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -21,17 +18,14 @@ type BlockchainService interface {
 
 type blockchainService struct {
 	blockChainRepo repository.BlockchainRepository
-	blockService BlockService
-	// DB *badger.DB
-	// LastBlock []byte // -> the last block in serialized format
-	// IsGenesis string
+	blockService   BlockService
 }
 
 func NewBlockchainService(blockchainRepo repository.BlockchainRepository,
 	blockService BlockService) BlockchainService {
 	return &blockchainService{
 		blockChainRepo: blockchainRepo,
-		blockService: blockService,
+		blockService:   blockService,
 	}
 }
 
@@ -44,7 +38,7 @@ func (bc *blockchainService) CreateBlockchain() (*representations.Block, bool, e
 		log.Error("Error getting genesis block: ", err.Error())
 		newBlock := bc.blockService.CreateBlock("Start of Blockchain", []byte{})
 		serializedBlock := bc.blockService.Serialize(newBlock)
-	
+
 		// Need: <k,v> = <block.Hash, serialized(block)>
 		//       <k,v> = <"lastBlock", block.Hash>
 		newBlockchain, err := bc.blockChainRepo.CreateBlock(newBlock.Hash, serializedBlock)
@@ -52,27 +46,16 @@ func (bc *blockchainService) CreateBlockchain() (*representations.Block, bool, e
 			log.Error("Error creating blockchain: ", err.Error())
 			return nil, doesExist, err
 		}
-	
+
 		return bc.blockService.Deserialize(newBlockchain), doesExist, err
-		// return &representations.Block{}, doesExist, err
 	}
 
 	// Genesis block always has an empty previous hash
 	if len(genesisBlock.PrevHash) == 0 {
 		doesExist = true
-	} 
+	}
 
 	return genesisBlock, doesExist, nil
-	// newBlock := bc.blockService.CreateBlock("Start of Blockchain", []byte{})
-	// serializedBlock := bc.blockService.Serialize(newBlock)
-
-	// newBlockchain, err := bc.blockChainRepo.CreateBlockchain(serializedBlock)
-	// if err != nil {
-	// 	log.Error("Error creating blockchain", err.Error())
-	// 	return nil, doesExist, err
-	// }
-
-	// return bc.blockService.Deserialize(newBlockchain), doesExist, err
 }
 
 // 1. Get the last block hash in the blockchain
@@ -95,40 +78,10 @@ func (bc *blockchainService) AddToBlockChain(data string) (*representations.Bloc
 	}
 
 	return newBlock, err
-	
-	
 
-	// var err error
-	// err = db.DB.Update(func(txn *badger.Txn) error {
-	// 	lastBlockHash, getErr := txn.Get([]byte("lastBlockSerial"))
-	// 	if getErr != nil {
-	// 		log.WithFields(log.Fields{"error": getErr.Error()}).Error("Error getting key lastBlockHash. Blockchain probably has not been created")
-	// 		return getErr
-	// 	} else {
-	// 		valErr := lastBlockHash.Value(func(val []byte) error {
-	// 			newBlock := CreateBlock(data, val)
-	// 			// err = txn.Set(newBlock.Hash, newBlock.StructToByte())
-	// 			// err = txn.Set([]byte("lastBlockHash"), newBlock.Hash)
-	// 			err = txn.Set([]byte("lastBlockSerial"), newBlock.Serialize())
-	// 			bc.LastBlock = newBlock.Serialize()
-	// 			// bc.LastBlock = newBlock.Hash
-	// 			return nil
-	// 		})
-	// 		if valErr != nil {
-	// 			log.Error("Error getting value", valErr.Error())
-	// 			return valErr
-	// 		}
-	// 	}
-	// 	return nil
-	// })
-	// if err != nil {
-	// 	log.WithField("error", err.Error()).Error("Error adding block to block chain")
-	// 	return Deserialize(bc.LastBlock), err
-	// }
-	
-	// return Deserialize(bc.LastBlock), nil
 }
 
+// Get all blocks in the blockchain
 func (bc *blockchainService) GetBlockchain() ([]*representations.Block, error) {
 	var allBlocks []*representations.Block
 	blocks, err := bc.blockChainRepo.GetBlockchain()
@@ -167,4 +120,3 @@ func (bc *blockchainService) GetGenesisBlock() (*representations.Block, error) {
 
 	return genesis, nil
 }
-

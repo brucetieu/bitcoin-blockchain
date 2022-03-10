@@ -1,9 +1,9 @@
 package assembler
 
 import (
-	"github.com/brucetieu/blockchain/representations"
-	"fmt"
 	"encoding/base64"
+	"fmt"
+	"github.com/brucetieu/blockchain/representations"
 )
 
 func ToBlockMap(block *representations.Block) map[string]interface{} {

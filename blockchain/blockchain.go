@@ -26,14 +26,14 @@ func (bc *blockchain) CreateBlockchain() (bool, *Blockchain) {
 	// if err != nil {
 	// 	log.WithFields(log.Fields{"error": err.Error()}).Fatal("Error opening badgerdb")
 	// }
-	
+
 	var blockchain Blockchain
 	doesExist := false
 	errUpdate := db.DB.Update(func(txn *badger.Txn) error {
 		lastBlockHash, getErr := txn.Get([]byte("lastBlockSerial"))
 		if getErr != nil {
 			log.WithFields(log.Fields{"warning": getErr.Error()}).Warn("Blockchain doesn't exist... creating a new one.")
-			
+
 			firstBlock := CreateBlock("Start of Blockchain", []byte{})
 			// err = txn.Set(firstBlock.Hash, firstBlock.StructToByte())
 			errSet := txn.Set([]byte("lastBlockSerial"), firstBlock.Serialize())
@@ -54,8 +54,8 @@ func (bc *blockchain) CreateBlockchain() (bool, *Blockchain) {
 			}
 		}
 		return nil
-	  })
-	
+	})
+
 	if errUpdate != nil {
 		log.Error("Error creating new blockchain")
 	}
@@ -96,8 +96,6 @@ func (bc *blockchain) AddToBlockChain(data string) (*Block, error) {
 		log.WithField("error", err.Error()).Error("Error adding block to block chain")
 		return Deserialize(bc.LastBlock), err
 	}
-	
+
 	return Deserialize(bc.LastBlock), nil
 }
-
-

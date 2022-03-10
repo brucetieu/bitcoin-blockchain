@@ -9,6 +9,6 @@ func ConnectDatabase() {
 	if err != nil {
 		panic("Failed to connect to badger db.")
 	}
-	
+
 	DB = badgerDb
 }

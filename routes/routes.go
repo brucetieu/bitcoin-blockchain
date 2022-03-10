@@ -18,6 +18,5 @@ func InitRoutes(route *gin.Engine) {
 	groupRoute.GET("/blockchain", blockchainHandler.GetBlockchain)
 	groupRoute.GET("/blockchain/genesis", blockchainHandler.GetGenesisBlock)
 	groupRoute.POST("/blockchain/block", blockchainHandler.AddToBlockchain)
-	
 
 }

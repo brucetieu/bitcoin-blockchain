@@ -32,7 +32,7 @@ func NewProofOfWorkService(block *representations.Block) PowService {
 
 	return &powService{
 		Target: target,
-		Block: block,
+		Block:  block,
 	}
 }
 
@@ -57,7 +57,6 @@ func (pow *powService) Solve() (int64, []byte) {
 	// miner is basically trying to solve for nounce.
 	return int64(nounce), solvedHash
 }
-
 
 // sha256 hash the block data and nounce
 func (pow *powService) HashData() []byte {
