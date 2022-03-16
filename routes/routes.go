@@ -8,15 +8,17 @@ import (
 )
 
 func InitRoutes(route *gin.Engine) {
+	services.BlockAssembler = services.NewBlockAssemblerFac()
 	blockchainRepo := repository.NewBlockchainRepository()
 	blockService := services.NewBlockService()
-	blockchainService := services.NewBlockchainService(blockchainRepo, blockService)
+	transactionService := services.NewTransactionService()
+	blockchainService := services.NewBlockchainService(blockchainRepo, blockService, transactionService)
 	blockchainHandler := handlers.NewBlockchainHandler(blockchainService)
 
 	groupRoute := route.Group("/")
 	groupRoute.POST("/blockchain", blockchainHandler.CreateBlockchain)
 	groupRoute.GET("/blockchain", blockchainHandler.GetBlockchain)
 	groupRoute.GET("/blockchain/genesis", blockchainHandler.GetGenesisBlock)
-	groupRoute.POST("/blockchain/block", blockchainHandler.AddToBlockchain)
+	// groupRoute.POST("/blockchain/block", blockchainHandler.AddToBlockchain)
 
 }

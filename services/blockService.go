@@ -4,14 +4,14 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/brucetieu/blockchain/representations"
+	reps "github.com/brucetieu/blockchain/representations"
 	log "github.com/sirupsen/logrus"
 )
 
 type BlockService interface {
-	CreateBlock(data string, prevHash []byte) *representations.Block
-	Serialize(*representations.Block) []byte
-	Deserialize(data []byte) *representations.Block
+	CreateBlock(txns []*reps.Transaction, prevHash []byte) *reps.Block
+	Serialize(*reps.Block) []byte
+	Deserialize(data []byte) *reps.Block
 }
 
 type blockService struct {
@@ -22,12 +22,13 @@ func NewBlockService() BlockService {
 }
 
 // Create a single block in the block chain.
-func (bs *blockService) CreateBlock(data string, prevHash []byte) *representations.Block {
-	newBlock := &representations.Block{
+func (bs *blockService) CreateBlock(txns []*reps.Transaction, prevHash []byte) *reps.Block {
+	newBlock := &reps.Block{
 		Timestamp: time.Now().UnixMilli(),
-		Data:      []byte(data),
+		Transactions:      txns,
 		PrevHash:  prevHash,
 	}
+	// proof := bs.powService.Solve()
 	proof := NewProofOfWorkService(newBlock)
 	nounce, hash := proof.Solve()
 	newBlock.Nounce = nounce
@@ -35,7 +36,7 @@ func (bs *blockService) CreateBlock(data string, prevHash []byte) *representatio
 	return newBlock
 }
 
-func (bs *blockService) Serialize(block *representations.Block) []byte {
+func (bs *blockService) Serialize(block *reps.Block) []byte {
 	byteStruct, err := json.Marshal(block)
 	if err != nil {
 		log.Error("Unable to marshal", err.Error())
@@ -44,8 +45,8 @@ func (bs *blockService) Serialize(block *representations.Block) []byte {
 	return byteStruct
 }
 
-func (bs *blockService) Deserialize(data []byte) *representations.Block {
-	var block representations.Block
+func (bs *blockService) Deserialize(data []byte) *reps.Block {
+	var block reps.Block
 	err := json.Unmarshal(data, &block)
 	if err != nil {
 		log.Error("Unable to unmarshal: ", err.Error())
