@@ -3,8 +3,10 @@ package services
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
-	"fmt"
+
+	// "fmt"
 
 	reps "github.com/brucetieu/blockchain/representations"
 	log "github.com/sirupsen/logrus"
@@ -56,13 +58,22 @@ func (b *blockAssembler) HashTransactions(txns []*reps.Transaction) []byte {
 }
 
 func (b *blockAssembler) ToBlockMap(block *reps.Block) map[string]interface{} {
-	prevHash := fmt.Sprintf("%x", block.PrevHash)
-	hash := fmt.Sprintf("%x", block.Hash)
 	data := make(map[string]interface{})
 	data["timestamp"] = block.Timestamp
-	data["prevHash"] = prevHash
-	data["hash"] = hash
+	data["prevHash"] = hex.EncodeToString(block.PrevHash)
+	data["hash"] = hex.EncodeToString(block.Hash)
 	data["nounce"] = block.Nounce
-	data["transactions"] = block.Transactions
+
+	var transactions []*reps.ReadableTransaction
+	for _, txn := range block.Transactions {
+		transaction := &reps.ReadableTransaction{
+			ID: hex.EncodeToString(txn.ID),
+			Inputs: txn.Inputs,
+			Outputs: txn.Outputs,
+		}
+		transactions = append(transactions, transaction)
+	}
+	data["transactions"] = transactions
+
 	return data
 }

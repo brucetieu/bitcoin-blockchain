@@ -17,7 +17,7 @@ type BlockchainService interface {
 }
 
 type blockchainService struct {
-	blockChainRepo repository.BlockchainRepository
+	blockchainRepo repository.BlockchainRepository
 	blockService   BlockService
 	transactionService TransactionService
 	blockAssembler BlockAssemblerFac
@@ -26,7 +26,7 @@ type blockchainService struct {
 func NewBlockchainService(blockchainRepo repository.BlockchainRepository,
 	blockService BlockService, transactionService TransactionService) BlockchainService {
 	return &blockchainService{
-		blockChainRepo: blockchainRepo,
+		blockchainRepo: blockchainRepo,
 		blockService:   blockService,
 		transactionService: transactionService,
 		blockAssembler: BlockAssembler,
@@ -46,7 +46,7 @@ func (bc *blockchainService) CreateBlockchain(to string) (*reps.Block, bool, err
 
 		// Need: <k,v> = <block.Hash, serialized(block)>
 		//       <k,v> = <"lastBlock", block.Hash>
-		newBlockchain, err := bc.blockChainRepo.CreateBlock(newBlock.Hash, serializedBlock)
+		newBlockchain, err := bc.blockchainRepo.CreateBlock(newBlock.Hash, serializedBlock)
 		if err != nil {
 			log.Error("Error creating blockchain: ", err.Error())
 			return nil, doesExist, err
@@ -89,7 +89,7 @@ func (bc *blockchainService) CreateBlockchain(to string) (*reps.Block, bool, err
 // Get all blocks in the blockchain
 func (bc *blockchainService) GetBlockchain() ([]*reps.Block, error) {
 	var allBlocks []*reps.Block
-	blocks, err := bc.blockChainRepo.GetBlockchain()
+	blocks, err := bc.blockchainRepo.GetBlockchain()
 	if err != nil {
 		log.WithField("error", err.Error()).Error("Error getting all blocks in blockchain")
 		return allBlocks, err
@@ -105,7 +105,7 @@ func (bc *blockchainService) GetBlockchain() ([]*reps.Block, error) {
 // Get the first block in the block chain.
 func (bc *blockchainService) GetGenesisBlock() (*reps.Block, error) {
 	genesis := &reps.Block{}
-	blocks, err := bc.blockChainRepo.GetBlockchain()
+	blocks, err := bc.blockchainRepo.GetBlockchain()
 	if err != nil {
 		log.WithField("error", err.Error()).Error("Error getting all blocks in blockchain")
 		return &reps.Block{}, err
