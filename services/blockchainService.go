@@ -22,6 +22,7 @@ type blockchainService struct {
 	blockService       BlockService
 	transactionService TransactionService
 	blockAssembler     BlockAssemblerFac
+	txnAssembler TxnAssemblerFac
 }
 
 func NewBlockchainService(blockchainRepo repository.BlockchainRepository,
@@ -31,6 +32,7 @@ func NewBlockchainService(blockchainRepo repository.BlockchainRepository,
 		blockService:       blockService,
 		transactionService: transactionService,
 		blockAssembler:     BlockAssembler,
+		txnAssembler: TxnAssembler,
 	}
 }
 
@@ -82,14 +84,22 @@ func (bc *blockchainService) AddToBlockChain(from string, to string, amount int)
 	if err != nil {
 		return &reps.Block{}, err
 	}
+
 	newBlock := bc.blockService.CreateBlock([]*reps.Transaction{newTxn}, decodedLastBlock.Hash)
 
-	// Prsist to db
+	// Prsist block to db
 	_, err = bc.blockchainRepo.CreateBlock(newBlock.Hash, bc.blockAssembler.ToBlockBytes(newBlock))
 	if err != nil {
+		log.WithField("error", err.Error()).Error("Error saving block to db")
 		return &reps.Block{}, err
 	}
 
+	// Persist transaction to db
+	err = bc.blockchainRepo.CreateTransaction(newTxn.ID, bc.txnAssembler.ToTxnBytes(newTxn))
+	if err != nil {
+		log.WithField("error", err.Error()).Error("Error saving transaction to db")
+		return &reps.Block{}, err
+	}
 	return newBlock, err
 
 }

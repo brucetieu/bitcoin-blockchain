@@ -6,6 +6,7 @@ import (
 	"github.com/brucetieu/blockchain/db"
 	badger "github.com/dgraph-io/badger/v3"
 	log "github.com/sirupsen/logrus"
+
 )
 
 var lastBlockHashKey = "lastBlockHash" // This gives us back block.Hash for the last block
@@ -14,6 +15,7 @@ type BlockchainRepository interface {
 	CreateBlock(hash []byte, blockByte []byte) ([]byte, error)
 	GetBlock() ([]byte, error)
 	GetBlockchain() ([][]byte, error)
+	CreateTransaction(txnId []byte, txnBytes []byte) error
 }
 
 type blockchainRepository struct {
@@ -85,9 +87,25 @@ func (repo *blockchainRepository) CreateBlock(hash []byte, blockByte []byte) ([]
 	return repo.GetBlock()
 }
 
+func (repo *blockchainRepository) CreateTransaction(txnId []byte, txnBytes []byte) error {
+	errUpdate := db.DB.Update(func(badgerTxn *badger.Txn) error {
+		errSet := badgerTxn.Set(txnId, txnBytes)
+		if errSet != nil {
+			return errSet
+		}
+
+		return nil
+	})
+
+	if errUpdate != nil {
+		return errUpdate
+	}
+
+	return nil
+}
+
 // Get all blocks in the blockchain
 func (repo *blockchainRepository) GetBlockchain() ([][]byte, error) {
-	log.Info("Printing blockchain")
 	blocks := make([][]byte, 0)
 
 	err := db.DB.View(func(txn *badger.Txn) error {
@@ -116,3 +134,6 @@ func (repo *blockchainRepository) GetBlockchain() ([][]byte, error) {
 
 	return blocks, nil
 }
+
+
+

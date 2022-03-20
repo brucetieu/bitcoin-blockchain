@@ -12,9 +12,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var BlockAssembler BlockAssemblerFac
+var (
+	BlockAssembler BlockAssemblerFac
+	TxnAssembler TxnAssemblerFac
+)
 
 type blockAssembler struct{}
+
+type txnAssembler struct {}
 
 func NewBlockAssemblerFac() BlockAssemblerFac {
 	return &blockAssembler{}
@@ -23,17 +28,26 @@ func NewBlockAssemblerFac() BlockAssemblerFac {
 type BlockAssemblerFac interface {
 	ToBlockBytes(block *reps.Block) []byte
 	ToBlockStructure(data []byte) *reps.Block
-	HashTransactions(txns []*reps.Transaction) []byte
 	ToBlockMap(block *reps.Block) map[string]interface{}
 }
 
+func NewTxnAssemblerFac() TxnAssemblerFac {
+	return &txnAssembler{}
+}
+type TxnAssemblerFac interface {
+	HashTransactions(txns []*reps.Transaction) []byte
+	ToTxnStructure(data []byte) *reps.Transaction
+	ToTxnBytes(txn *reps.Transaction) []byte
+}
+
+
 func (b *blockAssembler) ToBlockBytes(block *reps.Block) []byte {
-	byteStruct, err := json.Marshal(block)
+	blockBytes, err := json.Marshal(block)
 	if err != nil {
 		log.Error("Unable to marshal", err.Error())
 	}
 
-	return byteStruct
+	return blockBytes
 }
 
 func (b *blockAssembler) ToBlockStructure(data []byte) *reps.Block {
@@ -43,18 +57,6 @@ func (b *blockAssembler) ToBlockStructure(data []byte) *reps.Block {
 		log.Error("Unable to unmarshal: ", err.Error())
 	}
 	return &block
-}
-
-// Hash all transaction ids
-func (b *blockAssembler) HashTransactions(txns []*reps.Transaction) []byte {
-	allTxns := make([][]byte, 0)
-
-	for _, txn := range txns {
-		allTxns = append(allTxns, txn.ID)
-	}
-
-	hashedTxns := sha256.Sum256(bytes.Join(allTxns, []byte{}))
-	return hashedTxns[:]
 }
 
 func (b *blockAssembler) ToBlockMap(block *reps.Block) map[string]interface{} {
@@ -85,4 +87,34 @@ func (b *blockAssembler) ToBlockMap(block *reps.Block) map[string]interface{} {
 	data["transactions"] = transactions
 
 	return data
+}
+
+// Hash all transaction ids
+func (t *txnAssembler) HashTransactions(txns []*reps.Transaction) []byte {
+	allTxns := make([][]byte, 0)
+
+	for _, txn := range txns {
+		allTxns = append(allTxns, txn.ID)
+	}
+
+	hashedTxns := sha256.Sum256(bytes.Join(allTxns, []byte{}))
+	return hashedTxns[:]
+}
+
+func (t *txnAssembler) ToTxnStructure(data []byte) *reps.Transaction {
+	var txn reps.Transaction
+	err := json.Unmarshal(data, &txn)
+	if err != nil {
+		log.Error("Unable to unmarshal: ", err.Error())
+	}
+	return &txn
+}
+
+func (t *txnAssembler) ToTxnBytes(txn *reps.Transaction) []byte {
+	txnBytes, err := json.Marshal(txn)
+	if err != nil {
+		log.Error("Unable to marshal", err.Error())
+	}
+
+	return txnBytes
 }

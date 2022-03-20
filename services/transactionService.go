@@ -21,6 +21,7 @@ type TransactionService interface {
 	SetID(txnRep reps.Transaction) []byte
 	CreateCoinbaseTxn(to string, data string) *reps.Transaction
 	CreateTransaction(from string, to string, amount int) (*reps.Transaction, error)
+	GetTransactions() []*reps.Transaction
 	GetUnspentTransactions(address string) []reps.Transaction
 	GetUnspentTxnOutputs(address string) []reps.TxnOutput
 	GetSpendableOutputs(from string, amount int) (int, map[string][]int)
@@ -116,6 +117,16 @@ func (ts *transactionService) CreateTransaction(from string, to string, amount i
 
 	return &transaction, nil
 }
+
+// func (ts *transactionService) GetTransactions() ([]*reps.Transaction, error) {
+// 	blocks, err := ts.blockchainRepo.GetBlockchain()
+
+// 	if err != nil {
+// 		log.WithField("error", err.Error()).Error("Error getting blocks in blockchain")
+// 		return err
+// 	}
+
+// }
 
 // Find out how much of the unspendable outputs from the sender can be spent given an amount
 func (ts *transactionService) GetSpendableOutputs(from string, amount int) (int, map[string][]int) {

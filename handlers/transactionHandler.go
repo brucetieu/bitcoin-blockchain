@@ -19,6 +19,7 @@ func NewTransactionHandler(transactionService services.TransactionService) *Tran
 	}
 }
 
+// Get balance given an address
 func (th *TransactionHandler) GetBalance(c *gin.Context) {
 	address := c.Param("address")
 	balance := 0
@@ -31,4 +32,9 @@ func (th *TransactionHandler) GetBalance(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"address": address, "balance": balance})
+}
+
+// Get all transactions in the blockchain
+func (th *TransactionHandler) GetTransactions(c *gin.Context) {
+	
 }
