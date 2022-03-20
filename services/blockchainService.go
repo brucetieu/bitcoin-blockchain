@@ -65,8 +65,9 @@ func (bc *blockchainService) CreateBlockchain(to string) (*reps.Block, bool, err
 }
 
 // 1. Get the last block hash in the blockchain
-// 2. Create a new block using this last block hash as the previous hash
-// 3. Serialize this new block, and set this block as the last block hash in the blockchain
+// 2. Create a new transaction
+// 3. Create a new block with the transaction and use this last block hash as the previous hash
+// 4. Set (persist) this block to the db
 func (bc *blockchainService) AddToBlockChain(from string, to string, amount int) (*reps.Block, error) {
 	lastBlock, err := bc.blockchainRepo.GetBlock()
 	if err != nil {
