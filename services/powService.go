@@ -20,8 +20,9 @@ type PowService interface {
 }
 
 type powService struct {
-	Block  *representations.Block
-	Target *big.Int
+	Block          *representations.Block
+	Target         *big.Int
+	blockAssembler BlockAssemblerFac
 }
 
 func NewProofOfWorkService(block *representations.Block) PowService {
@@ -31,8 +32,9 @@ func NewProofOfWorkService(block *representations.Block) PowService {
 	target.Lsh(target, uint(256-TargetBits))
 
 	return &powService{
-		Target: target,
-		Block:  block,
+		Target:         target,
+		Block:          block,
+		blockAssembler: BlockAssembler,
 	}
 }
 
@@ -61,7 +63,7 @@ func (pow *powService) Solve() (int64, []byte) {
 // sha256 hash the block data and nounce
 func (pow *powService) HashData() []byte {
 	joined := bytes.Join([][]byte{
-		pow.Block.Data,
+		pow.blockAssembler.HashTransactions(pow.Block.Transactions),
 		pow.Block.PrevHash,
 		utils.Int64ToByte(pow.Block.Timestamp),
 		utils.Int64ToByte(pow.Block.Nounce),
@@ -74,8 +76,6 @@ func (pow *powService) ValidateProof() bool {
 	proposedHash := pow.HashData()
 	proposedHashInt := new(big.Int)
 	proposedHashInt.SetBytes(proposedHash)
-	if proposedHashInt.Cmp(pow.Target) == -1 {
-		return true
-	}
-	return false
+
+	return proposedHashInt.Cmp(pow.Target) == -1
 }

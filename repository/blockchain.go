@@ -1,13 +1,14 @@
 package repository
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/brucetieu/blockchain/db"
 	badger "github.com/dgraph-io/badger/v3"
 	log "github.com/sirupsen/logrus"
 )
+
+var lastBlockHashKey = "lastBlockHash" // This gives us back block.Hash for the last block
 
 type BlockchainRepository interface {
 	CreateBlock(hash []byte, blockByte []byte) ([]byte, error)
@@ -27,7 +28,7 @@ func (repo *blockchainRepository) GetBlock() ([]byte, error) {
 	var blockStructByte []byte
 
 	err := db.DB.View(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte("lastBlockHash")) // This gives us back block.Hash for the last block
+		item, err := txn.Get([]byte(lastBlockHashKey))
 		if err != nil {
 			log.WithFields(log.Fields{"warning": err.Error()}).Warn("Blockchain doesn't exist.")
 			return err
@@ -67,7 +68,7 @@ func (repo *blockchainRepository) GetBlock() ([]byte, error) {
 func (repo *blockchainRepository) CreateBlock(hash []byte, blockByte []byte) ([]byte, error) {
 	errUpdate := db.DB.Update(func(txn *badger.Txn) error {
 		errSet := txn.Set(hash, blockByte)
-		errSet = txn.Set([]byte("lastBlockHash"), hash)
+		errSet = txn.Set([]byte(lastBlockHashKey), hash)
 		if errSet != nil {
 			log.WithField("error", errSet.Error()).Error("Error setting entry")
 			return errSet
@@ -98,8 +99,7 @@ func (repo *blockchainRepository) GetBlockchain() ([][]byte, error) {
 			item := it.Item()
 			k := item.Key()
 			err := item.Value(func(v []byte) error {
-				fmt.Printf("key=%s, value=%s\n", k, v)
-				if !strings.EqualFold(string(k), "lastBlockHash") { // only want encoded block for now
+				if !strings.EqualFold(string(k), lastBlockHashKey) { // only want encoded block for now
 					blocks = append(blocks, v)
 				}
 				return nil
@@ -113,5 +113,6 @@ func (repo *blockchainRepository) GetBlockchain() ([][]byte, error) {
 	if err != nil {
 		return [][]byte{}, err
 	}
+
 	return blocks, nil
 }
