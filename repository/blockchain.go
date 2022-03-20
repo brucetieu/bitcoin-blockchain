@@ -85,7 +85,7 @@ func (repo *blockchainRepository) CreateBlock(hash []byte, blockByte []byte) ([]
 	return repo.GetBlock()
 }
 
-// Get all blocks in the blockchain, sorted from latest block in chain to the oldest.
+// Get all blocks in the blockchain
 func (repo *blockchainRepository) GetBlockchain() ([][]byte, error) {
 	log.Info("Printing blockchain")
 	blocks := make([][]byte, 0)

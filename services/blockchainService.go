@@ -74,7 +74,7 @@ func (bc *blockchainService) AddToBlockChain(from string, to string, amount int)
 		return &reps.Block{}, fmt.Errorf("error getting last block. Blockchain probably has not been created: %s", err.Error())
 	}
 
-	decodedLastBlock := bc.blockService.Deserialize(lastBlock)
+	decodedLastBlock := bc.blockAssembler.ToBlockStructure(lastBlock)
 
 	// create new transaction
 	newTxn, err := bc.transactionService.CreateTransaction(from, to, amount)
@@ -84,7 +84,7 @@ func (bc *blockchainService) AddToBlockChain(from string, to string, amount int)
 	newBlock := bc.blockService.CreateBlock([]*reps.Transaction{newTxn}, decodedLastBlock.Hash)
 
 	// Prsist to db
-	_, err = bc.blockchainRepo.CreateBlock(newBlock.Hash, bc.blockService.Serialize(newBlock))
+	_, err = bc.blockchainRepo.CreateBlock(newBlock.Hash, bc.blockAssembler.ToBlockBytes(newBlock))
 	if err != nil {
 		return &reps.Block{}, err
 	}
