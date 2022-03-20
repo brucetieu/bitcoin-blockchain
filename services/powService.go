@@ -20,8 +20,8 @@ type PowService interface {
 }
 
 type powService struct {
-	Block  *representations.Block
-	Target *big.Int
+	Block          *representations.Block
+	Target         *big.Int
 	blockAssembler BlockAssemblerFac
 }
 
@@ -32,8 +32,8 @@ func NewProofOfWorkService(block *representations.Block) PowService {
 	target.Lsh(target, uint(256-TargetBits))
 
 	return &powService{
-		Target: target,
-		Block:  block,
+		Target:         target,
+		Block:          block,
 		blockAssembler: BlockAssembler,
 	}
 }

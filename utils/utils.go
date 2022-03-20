@@ -16,6 +16,14 @@ func PrettyPrintln(message string, data interface{}) {
 	fmt.Println(message, string(obj))
 }
 
+func Pretty(data interface{}) string {
+	obj, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		log.Fatalf("Error: %s", err.Error())
+	}
+	return string(obj)
+}
+
 func Int64ToByte(i int64) []byte {
 	return []byte(strconv.FormatInt(i, 10))
 }

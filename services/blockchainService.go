@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/brucetieu/blockchain/repository"
 	reps "github.com/brucetieu/blockchain/representations"
@@ -10,26 +11,26 @@ import (
 )
 
 type BlockchainService interface {
-	// AddToBlockChain(data string) (*reps.Block, error)
+	AddToBlockChain(from string, to string, amount int) (*reps.Block, error)
 	CreateBlockchain(to string) (*reps.Block, bool, error)
 	GetBlockchain() ([]*reps.Block, error)
 	GetGenesisBlock() (*reps.Block, error)
 }
 
 type blockchainService struct {
-	blockchainRepo repository.BlockchainRepository
-	blockService   BlockService
+	blockchainRepo     repository.BlockchainRepository
+	blockService       BlockService
 	transactionService TransactionService
-	blockAssembler BlockAssemblerFac
+	blockAssembler     BlockAssemblerFac
 }
 
 func NewBlockchainService(blockchainRepo repository.BlockchainRepository,
 	blockService BlockService, transactionService TransactionService) BlockchainService {
 	return &blockchainService{
-		blockchainRepo: blockchainRepo,
-		blockService:   blockService,
+		blockchainRepo:     blockchainRepo,
+		blockService:       blockService,
 		transactionService: transactionService,
-		blockAssembler: BlockAssembler,
+		blockAssembler:     BlockAssembler,
 	}
 }
 
@@ -66,38 +67,51 @@ func (bc *blockchainService) CreateBlockchain(to string) (*reps.Block, bool, err
 // 1. Get the last block hash in the blockchain
 // 2. Create a new block using this last block hash as the previous hash
 // 3. Serialize this new block, and set this block as the last block hash in the blockchain
-// func (bc *blockchainService) AddToBlockChain(data string) (*reps.Block, error) {
-// 	lastBlock, err := bc.blockChainRepo.GetBlock()
-// 	if err != nil {
-// 		log.WithField("error", err.Error()).Error("Error getting last block. Blockchain probably has not been created")
-// 		return &reps.Block{}, fmt.Errorf("error getting last block. Blockchain probably has not been created: %s", err.Error())
-// 	}
+func (bc *blockchainService) AddToBlockChain(from string, to string, amount int) (*reps.Block, error) {
+	lastBlock, err := bc.blockchainRepo.GetBlock()
+	if err != nil {
+		log.WithField("error", err.Error()).Error("Error getting last block. Blockchain probably has not been created")
+		return &reps.Block{}, fmt.Errorf("error getting last block. Blockchain probably has not been created: %s", err.Error())
+	}
 
-// 	decodedLastBlock := bc.blockService.Deserialize(lastBlock)
-// 	newBlock := bc.blockService.CreateBlock(data, decodedLastBlock.Hash)
+	decodedLastBlock := bc.blockService.Deserialize(lastBlock)
 
-// 	// Prsist to db
-// 	_, err = bc.blockChainRepo.CreateBlock(newBlock.Hash, bc.blockService.Serialize(newBlock))
-// 	if err != nil {
-// 		return &reps.Block{}, err
-// 	}
+	// create new transaction
+	newTxn, err := bc.transactionService.CreateTransaction(from, to, amount)
+	if err != nil {
+		return &reps.Block{}, err
+	}
+	newBlock := bc.blockService.CreateBlock([]*reps.Transaction{newTxn}, decodedLastBlock.Hash)
 
-// 	return newBlock, err
+	// Prsist to db
+	_, err = bc.blockchainRepo.CreateBlock(newBlock.Hash, bc.blockService.Serialize(newBlock))
+	if err != nil {
+		return &reps.Block{}, err
+	}
 
-// }
+	return newBlock, err
+
+}
 
 // Get all blocks in the blockchain
 func (bc *blockchainService) GetBlockchain() ([]*reps.Block, error) {
 	var allBlocks []*reps.Block
+
 	blocks, err := bc.blockchainRepo.GetBlockchain()
 	if err != nil {
 		log.WithField("error", err.Error()).Error("Error getting all blocks in blockchain")
 		return allBlocks, err
 	}
+
 	for _, block := range blocks {
 		decodedB := bc.blockAssembler.ToBlockStructure(block)
 		allBlocks = append(allBlocks, decodedB)
 	}
+
+	// Ensure that genesis block is last
+	sort.Slice(allBlocks, func(i, j int) bool {
+		return allBlocks[i].Timestamp > allBlocks[j].Timestamp
+	})
 
 	return allBlocks, nil
 }

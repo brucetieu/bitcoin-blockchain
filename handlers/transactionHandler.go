@@ -4,9 +4,10 @@ import (
 	"net/http"
 
 	"github.com/brucetieu/blockchain/services"
+	"github.com/brucetieu/blockchain/utils"
 	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 )
-
 
 type TransactionHandler struct {
 	transactionService services.TransactionService
@@ -23,7 +24,7 @@ func (th *TransactionHandler) GetBalance(c *gin.Context) {
 	balance := 0
 
 	unspentTxnOutputs := th.transactionService.GetUnspentTxnOutputs(address)
-
+	log.Info("unspentTxnOutputs in GetBalance: ", utils.Pretty(unspentTxnOutputs))
 
 	for _, unspentOutput := range unspentTxnOutputs {
 		balance += unspentOutput.Value

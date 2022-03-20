@@ -11,13 +11,13 @@ import (
 
 type BlockchainHandler struct {
 	blockchainService services.BlockchainService
-	assemblerService services.BlockAssemblerFac
+	assemblerService  services.BlockAssemblerFac
 }
 
 func NewBlockchainHandler(blockchainService services.BlockchainService) *BlockchainHandler {
 	return &BlockchainHandler{
 		blockchainService: blockchainService,
-		assemblerService: services.BlockAssembler,
+		assemblerService:  services.BlockAssembler,
 	}
 }
 
@@ -45,27 +45,27 @@ func (bch *BlockchainHandler) CreateBlockchain(c *gin.Context) {
 	}
 }
 
-// func (bch *BlockchainHandler) AddToBlockchain(c *gin.Context) {
-// 	// Validate input
-// 	var input reps.CreateBlockInput
-// 	if err := c.ShouldBindJSON(&input); err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-// 		return
-// 	}
+func (bch *BlockchainHandler) AddToBlockchain(c *gin.Context) {
+	// Validate input
+	var input reps.CreateBlockInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
-// 	// Create block and persist to db
-// 	newBlock, err := bch.blockchainService.AddToBlockChain(input.Data)
-// 	if err != nil {
-// 		log.WithField("error", err.Error()).Error("Error adding block")
-// 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-// 		return
-// 	}
+	// Create block and persist to db
+	newBlock, err := bch.blockchainService.AddToBlockChain(input.From, input.To, input.Amount)
+	if err != nil {
+		log.WithField("error", err.Error()).Error("Error adding block")
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
 
-// 	// Format return data to be readable
-// 	data := assembler.ToBlockMap(newBlock)
+	// Format return data to be readable
+	data := bch.assemblerService.ToBlockMap(newBlock)
 
-// 	c.JSON(http.StatusCreated, gin.H{"data": data})
-// }
+	c.JSON(http.StatusCreated, gin.H{"data": data})
+}
 
 // Print out all blocks in blockchain
 func (bch *BlockchainHandler) GetBlockchain(c *gin.Context) {

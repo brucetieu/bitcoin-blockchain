@@ -14,7 +14,7 @@ import (
 
 var BlockAssembler BlockAssemblerFac
 
-type blockAssembler struct {}
+type blockAssembler struct{}
 
 func NewBlockAssemblerFac() BlockAssemblerFac {
 	return &blockAssembler{}
@@ -66,9 +66,18 @@ func (b *blockAssembler) ToBlockMap(block *reps.Block) map[string]interface{} {
 
 	var transactions []*reps.ReadableTransaction
 	for _, txn := range block.Transactions {
+		var inputs []reps.ReadableTxnInput
+		for _, in := range txn.Inputs {
+			input := reps.ReadableTxnInput{
+				TxnID:     hex.EncodeToString(in.TxnID),
+				OutIdx:    in.OutIdx,
+				ScriptSig: in.ScriptSig,
+			}
+			inputs = append(inputs, input)
+		}
 		transaction := &reps.ReadableTransaction{
-			ID: hex.EncodeToString(txn.ID),
-			Inputs: txn.Inputs,
+			ID:      hex.EncodeToString(txn.ID),
+			Inputs:  inputs,
 			Outputs: txn.Outputs,
 		}
 		transactions = append(transactions, transaction)

@@ -24,9 +24,9 @@ func NewBlockService() BlockService {
 // Create a single block in the block chain.
 func (bs *blockService) CreateBlock(txns []*reps.Transaction, prevHash []byte) *reps.Block {
 	newBlock := &reps.Block{
-		Timestamp: time.Now().UnixMilli(),
-		Transactions:      txns,
-		PrevHash:  prevHash,
+		Timestamp:    time.Now().UnixMilli(),
+		Transactions: txns,
+		PrevHash:     prevHash,
 	}
 	// proof := bs.powService.Solve()
 	proof := NewProofOfWorkService(newBlock)
