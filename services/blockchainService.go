@@ -15,7 +15,7 @@ type BlockchainService interface {
 	// AddToBlockChain(from string, to string, amount int) (*reps.Block, error)
 	CreateBlockchain(to string) (*reps.Block, bool, error)
 	GetBlockchain() ([]reps.Block, error)
-	GetGenesisBlock() (*reps.Block, error)
+	GetGenesisBlock() (*reps.Block, int, error)
 }
 
 type blockchainService struct {
@@ -38,64 +38,85 @@ func NewBlockchainService(blockchainRepo repository.BlockchainRepository,
 func (bc *blockchainService) CreateBlockchain(to string) (*reps.Block, bool, error) {
 	doesExist := false
 
-	// Attempt to get genesis block. If it doesn't exist, then create a block.
-	genesisBlock, err := bc.GetGenesisBlock()
+	genesis, count, err := bc.blockchainRepo.GetGenesisBlock()
 	if err != nil {
-		log.Error("Error getting genesis block: ", err.Error())
+		return &reps.Block{}, doesExist, err
+	}
+
+	// Genesis doesn't exist, so create it.
+	if count == 0 {
 		coinbaseTxn := bc.transactionService.CreateCoinbaseTxn(to, "First transaction in Blockchain")
 		newBlock := bc.blockService.CreateBlock([]reps.Transaction{coinbaseTxn}, []byte{})
-		// serializedBlock := bc.blockAssembler.ToBlockBytes(newBlock)
 
-		utils.PrettyPrintln("newBlock", newBlock)
-		// for _, txn := range newBlock.Transactions {
-
-			// for i := 0; i < len(txn.Inputs); i++ {
-			// 	utils.PrettyPrintln("txnInput: ", txn.Inputs[i])
-			// 	txn.Inputs[i].TxnID = txn.TxnID
-
-			// 	err := bc.blockchainRepo.CreateTxnInput(txn.Inputs[i])
-			// 	if err != nil {
-			// 		log.Error("Error creating txnInput: ", err.Error())
-			// 		return &reps.Block{}, doesExist, err
-			// 	}
-			// }
-
-			// for _, txnOutput := range txn.Outputs {
-			// 	err := bc.blockchainRepo.CreateTxnOutput(txnOutput)
-			// 	if err != nil {
-			// 		log.Error("Error creating txnOutput: ", err.Error())
-			// 		return &reps.Block{}, doesExist, err
-			// 	}
-			// }
-			// temp := make([]reps.Transaction, 0)
-			// t := reps.Transaction{
-			// 	TxnID: newBlock.Transactions[0].TxnID,
-			// 	BlockID: newBlock.Transactions[0].BlockID,
-			// }
-			// temp = append(temp, t)
-			// err := bc.blockchainRepo.CreateTransaction(newBlock.Transactions)
-			// if err != nil {
-			// 	log.Error("Error creating transaction", err.Error())
-			// 	return &reps.Block{}, doesExist, err
-			// }
-		// }
-		// Need: <k,v> = <block.Hash, serialized(block)>
-		//       <k,v> = <"lastBlock", block.Hash>
 		err = bc.blockchainRepo.CreateBlock(*newBlock)
 		if err != nil {
 			log.Error("Error creating blockchain: ", err.Error())
 			return &reps.Block{}, doesExist, err
 		}
 
-		return newBlock, doesExist, err
+		return newBlock, doesExist, nil
 	}
 
-	// Genesis block always has an empty previous hash
-	if len(genesisBlock.PrevHash) == 0 {
-		doesExist = true
-	}
+	// Genesis does exist, so return it
+	return &genesis, true, nil
+	// Attempt to get genesis block. If it doesn't exist, then create a block.
+	// genesisBlock, err := bc.GetGenesisBlock()
+	// if err != nil {
+	// 	log.Error("Error getting genesis block: ", err.Error())
+	// 	coinbaseTxn := bc.transactionService.CreateCoinbaseTxn(to, "First transaction in Blockchain")
+	// 	newBlock := bc.blockService.CreateBlock([]reps.Transaction{coinbaseTxn}, []byte{})
+	// 	// serializedBlock := bc.blockAssembler.ToBlockBytes(newBlock)
 
-	return genesisBlock, doesExist, nil
+	// 	utils.PrettyPrintln("newBlock", newBlock)
+	// 	// for _, txn := range newBlock.Transactions {
+
+	// 		// for i := 0; i < len(txn.Inputs); i++ {
+	// 		// 	utils.PrettyPrintln("txnInput: ", txn.Inputs[i])
+	// 		// 	txn.Inputs[i].TxnID = txn.TxnID
+
+	// 		// 	err := bc.blockchainRepo.CreateTxnInput(txn.Inputs[i])
+	// 		// 	if err != nil {
+	// 		// 		log.Error("Error creating txnInput: ", err.Error())
+	// 		// 		return &reps.Block{}, doesExist, err
+	// 		// 	}
+	// 		// }
+
+	// 		// for _, txnOutput := range txn.Outputs {
+	// 		// 	err := bc.blockchainRepo.CreateTxnOutput(txnOutput)
+	// 		// 	if err != nil {
+	// 		// 		log.Error("Error creating txnOutput: ", err.Error())
+	// 		// 		return &reps.Block{}, doesExist, err
+	// 		// 	}
+	// 		// }
+	// 		// temp := make([]reps.Transaction, 0)
+	// 		// t := reps.Transaction{
+	// 		// 	TxnID: newBlock.Transactions[0].TxnID,
+	// 		// 	BlockID: newBlock.Transactions[0].BlockID,
+	// 		// }
+	// 		// temp = append(temp, t)
+	// 		// err := bc.blockchainRepo.CreateTransaction(newBlock.Transactions)
+	// 		// if err != nil {
+	// 		// 	log.Error("Error creating transaction", err.Error())
+	// 		// 	return &reps.Block{}, doesExist, err
+	// 		// }
+	// 	// }
+	// 	// Need: <k,v> = <block.Hash, serialized(block)>
+	// 	//       <k,v> = <"lastBlock", block.Hash>
+	// 	err = bc.blockchainRepo.CreateBlock(*newBlock)
+	// 	if err != nil {
+	// 		log.Error("Error creating blockchain: ", err.Error())
+	// 		return &reps.Block{}, doesExist, err
+	// 	}
+
+	// 	return newBlock, doesExist, err
+	// }
+
+	// // Genesis block always has an empty previous hash
+	// if len(genesisBlock.PrevHash) == 0 {
+	// 	doesExist = true
+	// }
+
+	// return genesisBlock, doesExist, nil
 }
 
 // 1. Get the last block hash in the blockchain
@@ -154,14 +175,32 @@ func (bc *blockchainService) GetBlockchain() ([]reps.Block, error) {
 }
 
 // Get the first block in the block chain.
-func (bc *blockchainService) GetGenesisBlock() (*reps.Block, error) {
+func (bc *blockchainService) GetGenesisBlock() (*reps.Block, int, error) {
 	log.Info("Getting Genesis Block...")
-	genesis, err := bc.blockchainRepo.GetGenesisBlock()
+
+	// Get Genesis block from db
+	genesis, count, err := bc.blockchainRepo.GetGenesisBlock()
 	if err != nil {
-		return &reps.Block{}, err
+		return &reps.Block{}, -1, err
 	}
 
-	return &genesis, nil
+	if count == 0 {
+		return &reps.Block{}, count, nil
+	}
+	log.Info("Returned genesis block: ", utils.Pretty(genesis))
+
+	// Get transaction in the block above
+	transactions, err := bc.blockchainRepo.GetTransactions(genesis.ID)
+	if err != nil {
+		return &reps.Block{}, -1, err
+	}
+
+	// Get inputs and outputs for the transaction above
+	// txnInputs, err := bc.blockchainrepo.GetTransactionInputs()
+
+	genesis.Transactions = transactions
+
+	return &genesis, count, nil
 	// genesis := &reps.Block{}
 	// blocks, err := bc.blockchainRepo.GetBlockchain()
 	// if err != nil {

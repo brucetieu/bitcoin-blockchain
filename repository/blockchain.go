@@ -3,7 +3,7 @@ package repository
 import (
 	// "strings"
 
-	"fmt"
+	// "fmt"
 
 	"github.com/brucetieu/blockchain/db"
 	"github.com/brucetieu/blockchain/utils"
@@ -20,8 +20,9 @@ var lastBlockHashKey = "lastBlockHash" // This gives us back block.Hash for the 
 type BlockchainRepository interface {
 	// CreateBlock(hash []byte, blockByte []byte) ([]byte, error)
 	CreateTransaction(txn []reps.Transaction) error
+	GetTransactions(blockId string) ([]reps.Transaction, error)
 	CreateBlock(block reps.Block) error
-	GetGenesisBlock() (reps.Block, error) 
+	GetGenesisBlock() (reps.Block, int, error)
 	GetBlockchain() ([]reps.Block, error)
 
 	CreateTxnInput(txnInput reps.TxnInput) error
@@ -58,18 +59,30 @@ func (repo *blockchainRepository) CreateTransaction(txn []reps.Transaction) erro
 	return nil
 }
 
-func (repo *blockchainRepository) GetGenesisBlock() (reps.Block, error) {
+// Get all transactions in a given block.
+func (repo *blockchainRepository) GetTransactions(blockId string) ([]reps.Transaction, error) {
+	var transactions []reps.Transaction
+
+	err := db.DB.Where("block_id = ?", blockId).
+			Find(&transactions).
+			Error
+	
+	if err != nil {
+		return []reps.Transaction{}, err
+	}
+
+	return transactions, nil
+}
+
+func (repo *blockchainRepository) GetGenesisBlock() (reps.Block, int, error) {
 	var genesisBlock reps.Block
 
-	if err := db.DB.Where("prev_hash is NULL AND hash IS NOT NULL").Find(&genesisBlock).Error; err != nil {
-		return reps.Block{}, err
-	}
+	res := db.DB.Where("prev_hash = ''").Find(&genesisBlock)
+	if res.Error != nil {
+		return reps.Block{}, -1, res.Error
+	}	
 
-	utils.PrettyPrintln("genesis", genesisBlock)
-	if genesisBlock.PrevHash == nil {
-		return reps.Block{}, fmt.Errorf("error")
-	}
-	return genesisBlock, nil
+	return genesisBlock, int(res.RowsAffected), nil
 
 }
 

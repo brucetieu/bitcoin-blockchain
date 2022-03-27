@@ -61,6 +61,8 @@ func (ts *transactionService) CreateCoinbaseTxn(to string, data string) reps.Tra
 	}
 
 	var txnOut reps.TxnOutput
+	txnInputId := uuid.Must(uuid.NewRandom()).String()
+	txnOutputId := uuid.Must(uuid.NewRandom()).String()
 	// txnIn := reps.TxnInput{uuid.Must(uuid.NewRandom()).String(), []byte{}, -1, data}
 	// txnOut := reps.TxnOutput{uuid.Must(uuid.NewRandom)).String(), Reward, to}
 
@@ -68,7 +70,7 @@ func (ts *transactionService) CreateCoinbaseTxn(to string, data string) reps.Tra
 	// txnRep.Inputs = []reps.TxnInput{txnIn}
 	// txnRep.Outputs = []reps.TxnOutput{txnOut}
 	txnID := ts.SetID(txnRep)
-	txnOut.OutputID = uuid.Must(uuid.NewRandom()).String()
+	txnOut.OutputID = txnOutputId
 	txnOut.TxnID = txnID
 	txnOut.Value = Reward
 	txnOut.ScriptPubKey = to
@@ -77,10 +79,12 @@ func (ts *transactionService) CreateCoinbaseTxn(to string, data string) reps.Tra
 
 	// Needs to be block_id
 	// txnRep.ID = uuid.Must(uuid.NewRandom())
-	txnIn := reps.TxnInput{uuid.Must(uuid.NewRandom()).String(), txnID, -1, data}
+	txnIn := reps.TxnInput{txnInputId, []byte{}, -1, data}
 	txnRep.Inputs = []reps.TxnInput{txnIn}
 	txnRep.ID = txnID
 
+	txnRep.InputID = txnInputId
+	txnRep.OutputID = txnOutputId
 	utils.PrettyPrintln("coinbasetxn", txnRep)
 	return txnRep
 }

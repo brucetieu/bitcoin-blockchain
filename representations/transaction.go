@@ -7,6 +7,8 @@ type Transaction struct {
 	BlockID string `json:"blockId" `
 	// ID string `gorm:"primary_key;type:char(36);"` // references block id
 	// TxnID      []byte `json:"txnId" gorm:"primary_key"`
+	// InputID string 
+	// OutputID string 
 	Inputs  []TxnInput `json:"txnInputs" gorm:"foreignKey:TxnID;association_foreignkey:ID;PRELOAD:false"`
 	Outputs []TxnOutput `json:"txnOutputs" gorm:"foreignKey:TxnID;association_foreignkey:ID;PRELOAD:false"`
 }

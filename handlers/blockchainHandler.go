@@ -87,7 +87,7 @@ func (bch *BlockchainHandler) GetBlockchain(c *gin.Context) {
 
 // Get the first block in block chain
 func (bch *BlockchainHandler) GetGenesisBlock(c *gin.Context) {
-	genesis, err := bch.blockchainService.GetGenesisBlock()
+	genesis, _, err := bch.blockchainService.GetGenesisBlock()
 	if err != nil {
 		log.WithField("error", err.Error()).Error("Error getting genesis block")
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
