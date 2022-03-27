@@ -12,7 +12,7 @@ func main() {
 	fmt.Println("Blockchain")
 
 	db.ConnectDatabase()
-	defer db.DB.Close()
+	// defer db.DB.
 
 	// r := gin.Default()
 	router := gin.Default()

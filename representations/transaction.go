@@ -1,9 +1,14 @@
 package representations
 
+// import "github.com/google/uuid"
+
 type Transaction struct {
-	ID      []byte
-	Inputs  []TxnInput
-	Outputs []TxnOutput
+	ID     []byte   `json:"txnId" gorm:"primary_key"`
+	BlockID string `json:"blockId" `
+	// ID string `gorm:"primary_key;type:char(36);"` // references block id
+	// TxnID      []byte `json:"txnId" gorm:"primary_key"`
+	Inputs  []TxnInput `json:"txnInputs" gorm:"foreignKey:TxnID;association_foreignkey:ID;PRELOAD:false"`
+	Outputs []TxnOutput `json:"txnOutputs" gorm:"foreignKey:TxnID;association_foreignkey:ID;PRELOAD:false"`
 }
 
 type ReadableTransaction struct {
@@ -16,7 +21,8 @@ type ReadableTransaction struct {
 // OutIdx -> Index of an output in a transaction
 // ScriptSig ->  Script which provides data to be used in an outputs ScriptPubKey
 type TxnInput struct {
-	TxnID     []byte `json:"txnId"`
+	InputID string `json:"inputId" gorm:"primary_key"`
+	TxnID     []byte `json:"txnId" gorm:"column:txn_id"`
 	OutIdx    int    `json:"outIdx"`
 	ScriptSig string `json:"scriptSig"`
 }
@@ -30,6 +36,8 @@ type ReadableTxnInput struct {
 // Value -> Stores coins
 // ScriptPubKey -> Value needed to unlock a transaction
 type TxnOutput struct {
+	OutputID string `json:"outputId" gorm:"primary_key"`
+	TxnID []byte `json:"txnId" gorm:"column:txn_id"` 
 	Value        int    `json:"value"`
 	ScriptPubKey string `json:"scriptPubKey"`
 }

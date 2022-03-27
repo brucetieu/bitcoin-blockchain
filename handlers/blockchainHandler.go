@@ -36,7 +36,7 @@ func (bch *BlockchainHandler) CreateBlockchain(c *gin.Context) {
 	}
 
 	// Format return data to be readable
-	data := bch.assemblerService.ToBlockMap(decodedGenesis)
+	data := bch.assemblerService.ToBlockMap(*decodedGenesis)
 
 	if exists {
 		c.JSON(http.StatusOK, gin.H{"message": "Blockchain already exists."})
@@ -45,27 +45,27 @@ func (bch *BlockchainHandler) CreateBlockchain(c *gin.Context) {
 	}
 }
 
-func (bch *BlockchainHandler) AddToBlockchain(c *gin.Context) {
-	// Validate input
-	var input reps.CreateBlockInput
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
+// func (bch *BlockchainHandler) AddToBlockchain(c *gin.Context) {
+// 	// Validate input
+// 	var input reps.CreateBlockInput
+// 	if err := c.ShouldBindJSON(&input); err != nil {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+// 		return
+// 	}
 
-	// Create block and persist to db
-	newBlock, err := bch.blockchainService.AddToBlockChain(input.From, input.To, input.Amount)
-	if err != nil {
-		log.WithField("error", err.Error()).Error("Error adding block")
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		return
-	}
+// 	// Create block and persist to db
+// 	newBlock, err := bch.blockchainService.AddToBlockChain(input.From, input.To, input.Amount)
+// 	if err != nil {
+// 		log.WithField("error", err.Error()).Error("Error adding block")
+// 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+// 		return
+// 	}
 
-	// Format return data to be readable
-	data := bch.assemblerService.ToBlockMap(newBlock)
+// 	// Format return data to be readable
+// 	data := bch.assemblerService.ToBlockMap(newBlock)
 
-	c.JSON(http.StatusCreated, gin.H{"data": data})
-}
+// 	c.JSON(http.StatusCreated, gin.H{"data": data})
+// }
 
 // Print out all blocks in blockchain
 func (bch *BlockchainHandler) GetBlockchain(c *gin.Context) {
@@ -94,7 +94,7 @@ func (bch *BlockchainHandler) GetGenesisBlock(c *gin.Context) {
 		return
 	}
 
-	formattedGenesis := bch.assemblerService.ToBlockMap(genesis)
+	formattedGenesis := bch.assemblerService.ToBlockMap(*genesis)
 
 	c.JSON(http.StatusOK, gin.H{"data": formattedGenesis})
 }

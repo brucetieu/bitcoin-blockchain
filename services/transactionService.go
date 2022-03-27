@@ -11,23 +11,25 @@ import (
 	"github.com/brucetieu/blockchain/repository"
 	reps "github.com/brucetieu/blockchain/representations"
 	"github.com/brucetieu/blockchain/utils"
+	"github.com/google/uuid"
 
 	log "github.com/sirupsen/logrus"
+	// "github.com/google/uuid"
 )
 
 var Reward = 50
 
 type TransactionService interface {
 	SetID(txnRep reps.Transaction) []byte
-	CreateCoinbaseTxn(to string, data string) *reps.Transaction
-	CreateTransaction(from string, to string, amount int) (*reps.Transaction, error)
+	CreateCoinbaseTxn(to string, data string) reps.Transaction
+	CreateTransaction(from string, to string, amount int) (reps.Transaction, error)
 	GetUnspentTransactions(address string) []reps.Transaction
 	GetUnspentTxnOutputs(address string) []reps.TxnOutput
 	GetSpendableOutputs(from string, amount int) (int, map[string][]int)
 
-	CanUnlock(input *reps.TxnInput, data string) bool
-	CanBeUnlockedWith(output *reps.TxnOutput, data string) bool
-	IsCoinbaseTransaction(txn *reps.Transaction) bool
+	CanUnlock(input reps.TxnInput, data string) bool
+	CanBeUnlockedWith(output reps.TxnOutput, data string) bool
+	IsCoinbaseTransaction(txn reps.Transaction) bool
 }
 
 type transactionService struct {
@@ -52,26 +54,38 @@ func (ts *transactionService) SetID(txnRep reps.Transaction) []byte {
 }
 
 // A coinbase transaction is a special type of transaction which doesn’t require previously existing outputs. It creates the output
-func (ts *transactionService) CreateCoinbaseTxn(to string, data string) *reps.Transaction {
+func (ts *transactionService) CreateCoinbaseTxn(to string, data string) reps.Transaction {
 	log.WithFields(log.Fields{"to": to, "data": data}).Info("Creating coinbase transaction")
 	if data == "" {
 		data = fmt.Sprintf("Coins to: %s", to)
 	}
 
-	txnIn := reps.TxnInput{[]byte{}, -1, data}
-	txnOut := reps.TxnOutput{Reward, to}
+	var txnOut reps.TxnOutput
+	// txnIn := reps.TxnInput{uuid.Must(uuid.NewRandom()).String(), []byte{}, -1, data}
+	// txnOut := reps.TxnOutput{uuid.Must(uuid.NewRandom)).String(), Reward, to}
 
 	txnRep := reps.Transaction{}
-	txnRep.Inputs = []reps.TxnInput{txnIn}
-	txnRep.Outputs = []reps.TxnOutput{txnOut}
+	// txnRep.Inputs = []reps.TxnInput{txnIn}
+	// txnRep.Outputs = []reps.TxnOutput{txnOut}
 	txnID := ts.SetID(txnRep)
+	txnOut.OutputID = uuid.Must(uuid.NewRandom()).String()
+	txnOut.TxnID = txnID
+	txnOut.Value = Reward
+	txnOut.ScriptPubKey = to
 
+	txnRep.Outputs = []reps.TxnOutput{txnOut}
+
+	// Needs to be block_id
+	// txnRep.ID = uuid.Must(uuid.NewRandom())
+	txnIn := reps.TxnInput{uuid.Must(uuid.NewRandom()).String(), txnID, -1, data}
+	txnRep.Inputs = []reps.TxnInput{txnIn}
 	txnRep.ID = txnID
 
-	return &txnRep
+	utils.PrettyPrintln("coinbasetxn", txnRep)
+	return txnRep
 }
 
-func (ts *transactionService) CreateTransaction(from string, to string, amount int) (*reps.Transaction, error) {
+func (ts *transactionService) CreateTransaction(from string, to string, amount int) (reps.Transaction, error) {
 	log.WithFields(log.Fields{"from": from, "to": to, "amount": amount}).Info("Creating transaction...")
 	var transaction reps.Transaction
 	txnInputs := make([]reps.TxnInput, 0)
@@ -84,7 +98,7 @@ func (ts *transactionService) CreateTransaction(from string, to string, amount i
 	if amount > totalUnspentAmount {
 		err := fmt.Errorf("%s only has %d coins to send to %s, not %d, Cancelling transaction", from, totalUnspentAmount, to, amount)
 		log.Error(err)
-		return &reps.Transaction{}, err
+		return reps.Transaction{}, err
 	}
 
 	// For each found unspent output an input referencing it is created
@@ -95,26 +109,36 @@ func (ts *transactionService) CreateTransaction(from string, to string, amount i
 		}
 
 		for _, outputIdx := range outputIndices {
-			input := reps.TxnInput{decodedTxnId, outputIdx, from}
+			input := reps.TxnInput{uuid.Must(uuid.NewRandom()).String(), decodedTxnId, outputIdx, from}
 			txnInputs = append(txnInputs, input)
 		}
 	}
 
-	// Amount sender gave to receiver
-	txnOutputs = append(txnOutputs, reps.TxnOutput{amount, to})
+	// // Amount sender gave to receiver
+	// txnOutputs = append(txnOutputs, reps.TxnOutput{amount, to})
 
-	// Any change associated with sender
-	if totalUnspentAmount > amount {
-		txnOutputs = append(txnOutputs, reps.TxnOutput{totalUnspentAmount - amount, from})
-	}
+	// // Any change associated with sender
+	// if totalUnspentAmount > amount {
+	// 	txnOutputs = append(txnOutputs, reps.TxnOutput{totalUnspentAmount - amount, from})
+	// }
 
 	// Create new transaction
 	transaction.Inputs = txnInputs
-	transaction.Outputs = txnOutputs
+	// transaction.Outputs = txnOutputs
 	txnId := ts.SetID(transaction)
 	transaction.ID = txnId
 
-	return &transaction, nil
+	// Amount sender gave to receiver
+	txnOutputs = append(txnOutputs, reps.TxnOutput{uuid.Must(uuid.NewRandom()).String(), txnId, amount, to})
+
+	// Any change associated with sender
+	if totalUnspentAmount > amount {
+		txnOutputs = append(txnOutputs, reps.TxnOutput{uuid.Must(uuid.NewRandom()).String(),txnId, totalUnspentAmount - amount, from})
+	}
+	
+	transaction.Outputs = txnOutputs
+
+	return transaction, nil
 }
 
 // Find out how much of the unspendable outputs from the sender can be spent given an amount
@@ -132,7 +156,7 @@ func (ts *transactionService) GetSpendableOutputs(from string, amount int) (int,
 		txnId := hex.EncodeToString(unspentTxn.ID)
 
 		for outputIdx, output := range unspentTxn.Outputs {
-			if ts.CanBeUnlockedWith(&output, from) /*&& totalUnspentAmount < amount*/ {
+			if ts.CanBeUnlockedWith(output, from) /*&& totalUnspentAmount < amount*/ {
 				unspentOutIdxs[txnId] = append(unspentOutIdxs[txnId], outputIdx)
 				totalUnspentAmount += output.Value
 
@@ -148,7 +172,7 @@ func (ts *transactionService) GetSpendableOutputs(from string, amount int) (int,
 // Get all transactions whose outputs aren't referenced in inputs
 func (ts *transactionService) GetUnspentTransactions(address string) []reps.Transaction {
 	var unspentTxns []reps.Transaction
-	var allBlocks []*reps.Block
+	// var allBlocks []*reps.Block
 
 	// key: transaction id, value: list of output indices
 	spentTxns := make(map[string][]int)
@@ -160,17 +184,17 @@ func (ts *transactionService) GetUnspentTransactions(address string) []reps.Tran
 	}
 
 	// Convert back to struct
-	for _, block := range blocks {
-		decodedB := ts.blockAssembler.ToBlockStructure(block)
-		allBlocks = append(allBlocks, decodedB)
-	}
+	// for _, block := range blocks {
+	// 	decodedB := ts.blockAssembler.ToBlockStructure(block)
+	// 	allBlocks = append(allBlocks, decodedB)
+	// }
 
 	// Need to process genesis block last
-	sort.Slice(allBlocks, func(i, j int) bool {
-		return allBlocks[i].Timestamp > allBlocks[j].Timestamp
+	sort.Slice(blocks, func(i, j int) bool {
+		return blocks[i].Timestamp > blocks[j].Timestamp
 	})
 
-	for _, block := range allBlocks {
+	for _, block := range blocks {
 
 		for _, txn := range block.Transactions {
 			txnId := hex.EncodeToString(txn.ID)
@@ -187,15 +211,15 @@ func (ts *transactionService) GetUnspentTransactions(address string) []reps.Tran
 				}
 
 				// If we get to here no OutIdx is referenced in an input; ie unspent
-				if ts.CanBeUnlockedWith(&output, address) {
-					unspentTxns = append(unspentTxns, *txn)
+				if ts.CanBeUnlockedWith(output, address) {
+					unspentTxns = append(unspentTxns, txn)
 				}
 			}
 
 			// Non coinbase transaction will have an input with non negative OutIdx. Find all of them for a given transaction, these are the spent txns
 			if !ts.IsCoinbaseTransaction(txn) {
 				for _, input := range txn.Inputs {
-					if ts.CanUnlock(&input, address) {
+					if ts.CanUnlock(input, address) {
 						txnId := hex.EncodeToString(input.TxnID)
 						spentTxns[txnId] = append(spentTxns[txnId], input.OutIdx)
 					}
@@ -219,7 +243,7 @@ func (ts *transactionService) GetUnspentTxnOutputs(address string) []reps.TxnOut
 
 	for _, unspentTxn := range unspentTxns {
 		for _, output := range unspentTxn.Outputs {
-			if ts.CanBeUnlockedWith(&output, address) {
+			if ts.CanBeUnlockedWith(output, address) {
 				unspentTxnOutputs = append(unspentTxnOutputs, output)
 			}
 		}
@@ -228,14 +252,14 @@ func (ts *transactionService) GetUnspentTxnOutputs(address string) []reps.TxnOut
 	return unspentTxnOutputs
 }
 
-func (ts *transactionService) CanUnlock(input *reps.TxnInput, data string) bool {
+func (ts *transactionService) CanUnlock(input reps.TxnInput, data string) bool {
 	return strings.EqualFold(input.ScriptSig, data)
 }
 
-func (ts *transactionService) CanBeUnlockedWith(output *reps.TxnOutput, data string) bool {
+func (ts *transactionService) CanBeUnlockedWith(output reps.TxnOutput, data string) bool {
 	return strings.EqualFold(output.ScriptPubKey, data)
 }
 
-func (ts *transactionService) IsCoinbaseTransaction(txn *reps.Transaction) bool {
+func (ts *transactionService) IsCoinbaseTransaction(txn reps.Transaction) bool {
 	return len(txn.Inputs) == 1 && len(txn.Inputs[0].TxnID) == 0 && txn.Inputs[0].OutIdx == -1
 }

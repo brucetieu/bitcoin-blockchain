@@ -23,8 +23,8 @@ func NewBlockAssemblerFac() BlockAssemblerFac {
 type BlockAssemblerFac interface {
 	ToBlockBytes(block *reps.Block) []byte
 	ToBlockStructure(data []byte) *reps.Block
-	HashTransactions(txns []*reps.Transaction) []byte
-	ToBlockMap(block *reps.Block) map[string]interface{}
+	HashTransactions(txns []reps.Transaction) []byte
+	ToBlockMap(block reps.Block) map[string]interface{}
 }
 
 func (b *blockAssembler) ToBlockBytes(block *reps.Block) []byte {
@@ -46,7 +46,7 @@ func (b *blockAssembler) ToBlockStructure(data []byte) *reps.Block {
 }
 
 // Hash all transaction ids
-func (b *blockAssembler) HashTransactions(txns []*reps.Transaction) []byte {
+func (b *blockAssembler) HashTransactions(txns []reps.Transaction) []byte {
 	allTxns := make([][]byte, 0)
 
 	for _, txn := range txns {
@@ -57,7 +57,7 @@ func (b *blockAssembler) HashTransactions(txns []*reps.Transaction) []byte {
 	return hashedTxns[:]
 }
 
-func (b *blockAssembler) ToBlockMap(block *reps.Block) map[string]interface{} {
+func (b *blockAssembler) ToBlockMap(block reps.Block) map[string]interface{} {
 	data := make(map[string]interface{})
 	data["timestamp"] = block.Timestamp
 	data["prevHash"] = hex.EncodeToString(block.PrevHash)
