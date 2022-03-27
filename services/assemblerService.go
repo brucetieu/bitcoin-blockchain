@@ -66,20 +66,34 @@ func (b *blockAssembler) ToBlockMap(block reps.Block) map[string]interface{} {
 
 	var transactions []*reps.ReadableTransaction
 	for _, txn := range block.Transactions {
+
 		var inputs []reps.ReadableTxnInput
 		for _, in := range txn.Inputs {
 			input := reps.ReadableTxnInput{
-				TxnID:     hex.EncodeToString(in.TxnID),
+				CurrTxnID: hex.EncodeToString(txn.ID),
+				PrevTxnID:     hex.EncodeToString(in.PrevTxnID),
 				OutIdx:    in.OutIdx,
 				ScriptSig: in.ScriptSig,
 			}
 			inputs = append(inputs, input)
 		}
+
+		var outputs []reps.ReadableTxnOutput
+		for _, out := range txn.Outputs {
+			output := reps.ReadableTxnOutput {
+				CurrTxnID: hex.EncodeToString(txn.ID),
+				Value: out.Value,
+				ScriptPubKey: out.ScriptPubKey,
+			}
+			outputs = append(outputs, output)
+		}
+
 		transaction := &reps.ReadableTransaction{
 			ID:      hex.EncodeToString(txn.ID),
 			Inputs:  inputs,
-			Outputs: txn.Outputs,
+			Outputs: outputs,
 		}
+
 		transactions = append(transactions, transaction)
 	}
 	data["transactions"] = transactions

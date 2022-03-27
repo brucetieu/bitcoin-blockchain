@@ -26,7 +26,10 @@ type BlockchainRepository interface {
 	GetBlockchain() ([]reps.Block, error)
 
 	CreateTxnInput(txnInput reps.TxnInput) error
+	GetTxnInputs(txnId []byte) ([]reps.TxnInput, error)
+	GetTxnOutputs(txnId []byte) ([]reps.TxnOutput, error)
 	CreateTxnOutput(txnOutput reps.TxnOutput) error
+
 	// GetBlockchain() ([][]byte, error)
 }
 
@@ -74,6 +77,37 @@ func (repo *blockchainRepository) GetTransactions(blockId string) ([]reps.Transa
 	return transactions, nil
 }
 
+// Get all transaction inputs for a given transaction
+func (repo *blockchainRepository) GetTxnInputs(txnId []byte) ([]reps.TxnInput, error) {
+	var txnInputs []reps.TxnInput
+
+	err := db.DB.Where("curr_txn_id = ?", txnId).
+			Find(&txnInputs).
+			Error
+	
+	if err != nil {
+		return []reps.TxnInput{}, err
+	}
+
+	return txnInputs, nil
+}
+
+// Get all transaction outputs for a given transaction
+func (repo *blockchainRepository) GetTxnOutputs(txnId []byte) ([]reps.TxnOutput, error) {
+	var txnOutputs []reps.TxnOutput
+
+	err := db.DB.Where("curr_txn_id = ?", txnId).
+			Find(&txnOutputs).
+			Error
+	
+	if err != nil {
+		return []reps.TxnOutput{}, err
+	}
+
+	return txnOutputs, nil
+}
+
+// Get the first block in the blockchain
 func (repo *blockchainRepository) GetGenesisBlock() (reps.Block, int, error) {
 	var genesisBlock reps.Block
 
