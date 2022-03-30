@@ -22,6 +22,7 @@ func NewBlockchainHandler(blockchainService services.BlockchainService) *Blockch
 }
 
 func (bch *BlockchainHandler) CreateBlockchain(c *gin.Context) {
+	log.Info("Creating Blockchain")
 	// Validate input
 	var input reps.CreateBlockchainInput
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -45,27 +46,27 @@ func (bch *BlockchainHandler) CreateBlockchain(c *gin.Context) {
 	}
 }
 
-// func (bch *BlockchainHandler) AddToBlockchain(c *gin.Context) {
-// 	// Validate input
-// 	var input reps.CreateBlockInput
-// 	if err := c.ShouldBindJSON(&input); err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-// 		return
-// 	}
+func (bch *BlockchainHandler) AddToBlockchain(c *gin.Context) {
+	// Validate input
+	var input reps.CreateBlockInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
-// 	// Create block and persist to db
-// 	newBlock, err := bch.blockchainService.AddToBlockChain(input.From, input.To, input.Amount)
-// 	if err != nil {
-// 		log.WithField("error", err.Error()).Error("Error adding block")
-// 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-// 		return
-// 	}
+	// Create block and persist to db
+	newBlock, err := bch.blockchainService.AddToBlockChain(input.From, input.To, input.Amount)
+	if err != nil {
+		log.WithField("error", err.Error()).Error("Error adding block")
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
 
-// 	// Format return data to be readable
-// 	data := bch.assemblerService.ToBlockMap(newBlock)
+	// Format return data to be readable
+	data := bch.assemblerService.ToBlockMap(newBlock)
 
-// 	c.JSON(http.StatusCreated, gin.H{"data": data})
-// }
+	c.JSON(http.StatusCreated, gin.H{"data": data})
+}
 
 // Print out all blocks in blockchain
 func (bch *BlockchainHandler) GetBlockchain(c *gin.Context) {
@@ -87,10 +88,16 @@ func (bch *BlockchainHandler) GetBlockchain(c *gin.Context) {
 
 // Get the first block in block chain
 func (bch *BlockchainHandler) GetGenesisBlock(c *gin.Context) {
-	genesis, _, err := bch.blockchainService.GetGenesisBlock()
+	genesis, count, err := bch.blockchainService.GetGenesisBlock()
 	if err != nil {
 		log.WithField("error", err.Error()).Error("Error getting genesis block")
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Genesis not found
+	if count == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Genesis block was not created"})
 		return
 	}
 

@@ -10,12 +10,11 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-
 var DB *gorm.DB
 
 func ConnectDatabase() {
+	// Connect to running postgres container
 	dbURL := "postgres://postgres:pass@localhost:5432/blockchain"
-	// dsn := "host=localhost user=postgres password=postgres port=5432 sslmode=disable"
 
 	database, err := gorm.Open(postgres.Open(dbURL), &gorm.Config{})
 
@@ -25,15 +24,10 @@ func ConnectDatabase() {
 
 	database.Logger.LogMode(logger.Info)
 
-
-	// database.AutoMigrate(&models.Transaction{}, &models.TxnOutput{}, &models.TxnInput{})
 	database.AutoMigrate(&reps.Block{})
 	database.AutoMigrate(&reps.Transaction{})
 	database.AutoMigrate(&reps.TxnInput{})
 	database.AutoMigrate(&reps.TxnOutput{})
-	// database.AutoMigrate(&reps.Block{}, &reps.Transaction{})
-	// database.AutoMigrate(&reps.TxnOutput{}, &reps.TxnInput{})
-
 
 	DB = database
 }

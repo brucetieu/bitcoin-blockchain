@@ -1,9 +1,7 @@
 package services
 
 import (
-	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -20,7 +18,7 @@ import (
 var Reward = 50
 
 type TransactionService interface {
-	SetID(txnRep reps.Transaction) []byte
+	// SetID(txnRep reps.Transaction) []byte
 	CreateCoinbaseTxn(to string, data string) reps.Transaction
 	CreateTransaction(from string, to string, amount int) (reps.Transaction, error)
 	GetUnspentTransactions(address string) []reps.Transaction
@@ -35,23 +33,25 @@ type TransactionService interface {
 type transactionService struct {
 	blockchainRepo repository.BlockchainRepository
 	blockAssembler BlockAssemblerFac
+	txnAssembler   TxnAssemblerFac
 }
 
 func NewTransactionService(blockchainRepo repository.BlockchainRepository) TransactionService {
 	return &transactionService{
 		blockchainRepo: blockchainRepo,
 		blockAssembler: BlockAssembler,
+		txnAssembler:   TxnAssembler,
 	}
 }
 
-func (ts *transactionService) SetID(txnRep reps.Transaction) []byte {
-	txnRepInBytes, err := json.Marshal(txnRep)
-	if err != nil {
-		log.Error("Error marshalling object: ", err.Error())
-	}
-	hashID := sha256.Sum256(txnRepInBytes)
-	return hashID[:]
-}
+// func (ts *transactionService) SetID(txnRep reps.Transaction) []byte {
+// 	txnRepInBytes, err := json.Marshal(txnRep)
+// 	if err != nil {
+// 		log.Error("Error marshalling object: ", err.Error())
+// 	}
+// 	hashID := sha256.Sum256(txnRepInBytes)
+// 	return hashID[:]
+// }
 
 // A coinbase transaction is a special type of transaction which doesn’t require previously existing outputs. It creates the output
 func (ts *transactionService) CreateCoinbaseTxn(to string, data string) reps.Transaction {
@@ -60,36 +60,17 @@ func (ts *transactionService) CreateCoinbaseTxn(to string, data string) reps.Tra
 		data = fmt.Sprintf("Coins to: %s", to)
 	}
 
-	var txnOut reps.TxnOutput
-	txnInputId := uuid.Must(uuid.NewRandom()).String()
-	txnOutputId := uuid.Must(uuid.NewRandom()).String()
-	// txnIn := reps.TxnInput{uuid.Must(uuid.NewRandom()).String(), []byte{}, -1, data}
-	// txnOut := reps.TxnOutput{uuid.Must(uuid.NewRandom)).String(), Reward, to}
+	txnRep := ts.txnAssembler.ToCoinbaseTxn(to, data)
+	log.Info("txnRep in CreateCoinbaseTxn: ", utils.Pretty(txnRep))
 
-	txnRep := reps.Transaction{}
-	// txnRep.Inputs = []reps.TxnInput{txnIn}
-	// txnRep.Outputs = []reps.TxnOutput{txnOut}
-	currTxnID := ts.SetID(txnRep)
-	txnOut.OutputID = txnOutputId
-	txnOut.CurrTxnID = currTxnID
-	txnOut.Value = Reward
-	txnOut.ScriptPubKey = to
-
-	txnRep.Outputs = []reps.TxnOutput{txnOut}
-
-	// Needs to be block_id
-	// txnRep.ID = uuid.Must(uuid.NewRandom())
-	txnIn := reps.TxnInput{txnInputId, currTxnID, []byte{}, -1, data}
-	txnRep.Inputs = []reps.TxnInput{txnIn}
-	txnRep.ID = currTxnID
-
-	utils.PrettyPrintln("coinbasetxn", txnRep)
 	return txnRep
 }
 
 func (ts *transactionService) CreateTransaction(from string, to string, amount int) (reps.Transaction, error) {
 	log.WithFields(log.Fields{"from": from, "to": to, "amount": amount}).Info("Creating transaction...")
+
 	var transaction reps.Transaction
+	var txnOutput reps.TxnOutput
 	txnInputs := make([]reps.TxnInput, 0)
 	txnOutputs := make([]reps.TxnOutput, 0)
 
@@ -112,44 +93,47 @@ func (ts *transactionService) CreateTransaction(from string, to string, amount i
 
 		for _, outputIdx := range outputIndices {
 			input := reps.TxnInput{}
-			// input := reps.TxnInput{uuid.Must(uuid.NewRandom()).String(), decodedTxnId, outputIdx, from}
 			inputID := uuid.Must(uuid.NewRandom()).String()
 			input.InputID = inputID
 			input.PrevTxnID = decodedTxnId
 			input.OutIdx = outputIdx
+			input.ScriptSig = from
 			txnInputs = append(txnInputs, input)
 		}
 	}
 
-	// // Amount sender gave to receiver
-	// txnOutputs = append(txnOutputs, reps.TxnOutput{amount, to})
+	transaction.Inputs = txnInputs
 
-	// // Any change associated with sender
-	// if totalUnspentAmount > amount {
-	// 	txnOutputs = append(txnOutputs, reps.TxnOutput{totalUnspentAmount - amount, from})
-	// }
+	txnOutput.OutputID = uuid.Must(uuid.NewRandom()).String()
+	txnOutput.Value = amount
+	txnOutput.ScriptPubKey = to
 
-	// Create new transaction
-	// transaction.Inputs = txnInputs
-	// transaction.Outputs = txnOutputs
-	txnId := ts.SetID(transaction)
-	transaction.ID = txnId
+	// Amount sender gave to receiver
+	txnOutputs = append(txnOutputs, txnOutput)
+
+	// Any change associated with sender
+	if totalUnspentAmount > amount {
+		var txnOutputChange reps.TxnOutput
+		txnOutputChange.OutputID = uuid.Must(uuid.NewRandom()).String()
+		txnOutputChange.Value = totalUnspentAmount - amount
+		txnOutputChange.ScriptPubKey = from
+
+		txnOutputs = append(txnOutputs, txnOutputChange)
+	}
+
+	transaction.Outputs = txnOutputs
+
+	txnId := ts.txnAssembler.SetID(transaction)
 
 	for i := 0; i < len(txnInputs); i++ {
 		txnInputs[i].CurrTxnID = txnId
 	}
 
-	transaction.Inputs = txnInputs
-
-	// Amount sender gave to receiver
-	txnOutputs = append(txnOutputs, reps.TxnOutput{uuid.Must(uuid.NewRandom()).String(), txnId, amount, to})
-
-	// Any change associated with sender
-	if totalUnspentAmount > amount {
-		txnOutputs = append(txnOutputs, reps.TxnOutput{uuid.Must(uuid.NewRandom()).String(),txnId, totalUnspentAmount - amount, from})
+	for j := 0; j < len(txnOutputs); j++ {
+		txnOutputs[j].CurrTxnID = txnId
 	}
-	
-	transaction.Outputs = txnOutputs
+
+	transaction.ID = txnId
 
 	return transaction, nil
 }
@@ -185,7 +169,6 @@ func (ts *transactionService) GetSpendableOutputs(from string, amount int) (int,
 // Get all transactions whose outputs aren't referenced in inputs
 func (ts *transactionService) GetUnspentTransactions(address string) []reps.Transaction {
 	var unspentTxns []reps.Transaction
-	// var allBlocks []*reps.Block
 
 	// key: transaction id, value: list of output indices
 	spentTxns := make(map[string][]int)
@@ -195,12 +178,6 @@ func (ts *transactionService) GetUnspentTransactions(address string) []reps.Tran
 	if err != nil {
 		log.WithField("error", err.Error()).Error("Error getting blocks in blockchain")
 	}
-
-	// Convert back to struct
-	// for _, block := range blocks {
-	// 	decodedB := ts.blockAssembler.ToBlockStructure(block)
-	// 	allBlocks = append(allBlocks, decodedB)
-	// }
 
 	// Need to process genesis block last
 	sort.Slice(blocks, func(i, j int) bool {
