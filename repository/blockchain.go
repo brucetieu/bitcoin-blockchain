@@ -2,7 +2,7 @@ package repository
 
 import (
 	"github.com/brucetieu/blockchain/db"
-	"github.com/brucetieu/blockchain/utils"
+	// "github.com/brucetieu/blockchain/utils"
 
 	reps "github.com/brucetieu/blockchain/representations"
 )
