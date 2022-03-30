@@ -1,19 +1,26 @@
 package repository
 
 import (
-	"strings"
-
 	"github.com/brucetieu/blockchain/db"
-	badger "github.com/dgraph-io/badger/v3"
-	log "github.com/sirupsen/logrus"
+	// "github.com/brucetieu/blockchain/utils"
+
+	reps "github.com/brucetieu/blockchain/representations"
 )
 
-var lastBlockHashKey = "lastBlockHash" // This gives us back block.Hash for the last block
-
 type BlockchainRepository interface {
-	CreateBlock(hash []byte, blockByte []byte) ([]byte, error)
-	GetBlock() ([]byte, error)
-	GetBlockchain() ([][]byte, error)
+	CreateTransaction(txn []reps.Transaction) error
+	GetTransactions(blockId string) ([]reps.Transaction, error)
+	// GetTransactionsByTxnId(txnId []byte) ([]reps.Transaction, error)
+
+	CreateBlock(block reps.Block) error
+	GetGenesisBlock() (reps.Block, int, error)
+	GetBlockchain() ([]reps.Block, error)
+	GetLastBlock() (reps.Block, error)
+
+	CreateTxnOutput(txnOutput reps.TxnOutput) error
+	CreateTxnInput(txnInput reps.TxnInput) error
+	GetTxnInputs(txnId []byte) ([]reps.TxnInput, error)
+	GetTxnOutputs(txnId []byte) ([]reps.TxnOutput, error)
 }
 
 type blockchainRepository struct {
@@ -23,95 +30,151 @@ func NewBlockchainRepository() BlockchainRepository {
 	return &blockchainRepository{}
 }
 
-// Get the last serialized block in the blockchain
-func (repo *blockchainRepository) GetBlock() ([]byte, error) {
-	var blockStructByte []byte
-
-	err := db.DB.View(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte(lastBlockHashKey))
-		if err != nil {
-			log.WithFields(log.Fields{"warning": err.Error()}).Warn("Blockchain doesn't exist.")
-			return err
-		}
-
-		// This should give us block.Hash
-		blockStructByte, err = item.ValueCopy(nil)
-		if err != nil {
-			log.Error("Error retreiving value: ", err.Error())
-			return err
-		}
-
-		// This should give us the serialized block structure
-		item, err = txn.Get(blockStructByte)
-		if err != nil {
-			log.Error("Error retreiving value: ", err.Error())
-			return err
-		}
-
-		// Get the actual value
-		blockStructByte, err = item.ValueCopy(nil)
-		if err != nil {
-			log.Error("Error retreiving value: ", err.Error())
-			return err
-		}
-
+func (repo *blockchainRepository) CreateTxnInput(txnInput reps.TxnInput) error {
+	if err := db.DB.Create(&txnInput).Error; err != nil {
 		return err
-	})
-
-	if err != nil {
-		return blockStructByte, err
 	}
-	return blockStructByte, nil
+	return nil
 }
 
-// Add block to the blockchain, returns the last serialized block which is the one just created
-func (repo *blockchainRepository) CreateBlock(hash []byte, blockByte []byte) ([]byte, error) {
-	errUpdate := db.DB.Update(func(txn *badger.Txn) error {
-		errSet := txn.Set(hash, blockByte)
-		errSet = txn.Set([]byte(lastBlockHashKey), hash)
-		if errSet != nil {
-			log.WithField("error", errSet.Error()).Error("Error setting entry")
-			return errSet
-		}
-
-		return nil
-	})
-
-	if errUpdate != nil {
-		log.Error("Error creating new blockchain")
-		return []byte{}, errUpdate
+func (repo *blockchainRepository) CreateTxnOutput(txnOutput reps.TxnOutput) error {
+	if err := db.DB.Create(&txnOutput).Error; err != nil {
+		return err
 	}
-
-	return repo.GetBlock()
+	return nil
 }
 
-// Get all blocks in the blockchain
-func (repo *blockchainRepository) GetBlockchain() ([][]byte, error) {
-	log.Info("Printing blockchain")
-	blocks := make([][]byte, 0)
+func (repo *blockchainRepository) CreateTransaction(txn []reps.Transaction) error {
+	if err := db.DB.Create(&txn).Error; err != nil {
+		return err
+	}
+	return nil
+}
 
-	err := db.DB.View(func(txn *badger.Txn) error {
-		opts := badger.DefaultIteratorOptions
-		opts.PrefetchSize = 10
-		it := txn.NewIterator(opts)
-		defer it.Close()
-		for it.Rewind(); it.Valid(); it.Next() {
-			item := it.Item()
-			k := item.Key()
-			err := item.Value(func(v []byte) error {
-				if !strings.EqualFold(string(k), lastBlockHashKey) { // only want encoded block for now
-					blocks = append(blocks, v)
-				}
-				return nil
-			})
-			if err != nil {
-				return nil
-			}
-		}
-		return nil
-	})
+// Get the last (non genesis) block in the blockchain
+func (repo *blockchainRepository) GetLastBlock() (reps.Block, error) {
+	var lastBlock reps.Block
+
+	err := db.DB.Limit(1).Order("timestamp desc").Find(&lastBlock).Error
 	if err != nil {
-		return [][]byte{}, err
+		return reps.Block{}, err
+	}
+
+	return lastBlock, nil
+}
+
+// Get all transactions in a given block.
+func (repo *blockchainRepository) GetTransactions(blockId string) ([]reps.Transaction, error) {
+	var transactions []reps.Transaction
+
+	err := db.DB.Where("block_id = ?", blockId).
+		Preload("Inputs").
+		Preload("Outputs").
+		Find(&transactions).
+		Error
+
+	if err != nil {
+		return []reps.Transaction{}, err
+	}
+
+	return transactions, nil
+}
+
+// func (repo *blockchainRepository) GetTransactionsByTxnId(txnId []byte) ([]reps.Transaction, error) {
+// 	var transactions []reps.Transaction
+
+// 	err := db.DB.Where("id = ?", txnId).
+// 		Preload("Inputs").
+// 		Preload("Outputs").
+// 		Find(&transactions).
+// 		Error
+
+// 	if err != nil {
+// 		return []reps.Transaction{}, err
+// 	}
+
+// 	return transactions, nil
+// }
+
+// Get all transaction inputs for a given transaction
+func (repo *blockchainRepository) GetTxnInputs(txnId []byte) ([]reps.TxnInput, error) {
+	var txnInputs []reps.TxnInput
+
+	err := db.DB.Where("curr_txn_id = ?", txnId).
+		Find(&txnInputs).
+		Error
+
+	if err != nil {
+		return []reps.TxnInput{}, err
+	}
+
+	return txnInputs, nil
+}
+
+// Get all transaction outputs for a given transaction
+func (repo *blockchainRepository) GetTxnOutputs(txnId []byte) ([]reps.TxnOutput, error) {
+	var txnOutputs []reps.TxnOutput
+
+	err := db.DB.Where("curr_txn_id = ?", txnId).
+		Find(&txnOutputs).
+		Error
+
+	if err != nil {
+		return []reps.TxnOutput{}, err
+	}
+
+	return txnOutputs, nil
+}
+
+// Get the first block in the blockchain
+func (repo *blockchainRepository) GetGenesisBlock() (reps.Block, int, error) {
+	var genesisBlock reps.Block
+
+	res := db.DB.
+		Preload("Transactions").
+		Where("prev_hash = ''").
+		Find(&genesisBlock)
+	if res.Error != nil {
+		return reps.Block{}, -1, res.Error
+	}
+
+	txns, err := repo.GetTransactions(genesisBlock.ID)
+	if err != nil {
+		return reps.Block{}, -1, err
+	}
+
+	genesisBlock.Transactions = txns
+
+	return genesisBlock, int(res.RowsAffected), nil
+
+}
+
+func (repo *blockchainRepository) CreateBlock(block reps.Block) error {
+	if err := db.DB.Create(&block).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (repo *blockchainRepository) GetBlockchain() ([]reps.Block, error) {
+	var blocks []reps.Block
+
+	if err := db.DB.
+		Preload("Transactions").
+		Find(&blocks).Error; err != nil {
+		return []reps.Block{}, nil
+	}
+
+	for i := 0; i < len(blocks); i++ {
+		blockId := blocks[i].ID
+
+		txns, err := repo.GetTransactions(blockId)
+		if err != nil {
+			return []reps.Block{}, err
+		}
+
+		blocks[i].Transactions = txns
 	}
 
 	return blocks, nil

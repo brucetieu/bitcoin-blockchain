@@ -22,6 +22,7 @@ func NewBlockchainHandler(blockchainService services.BlockchainService) *Blockch
 }
 
 func (bch *BlockchainHandler) CreateBlockchain(c *gin.Context) {
+	log.Info("Creating Blockchain")
 	// Validate input
 	var input reps.CreateBlockchainInput
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -36,7 +37,7 @@ func (bch *BlockchainHandler) CreateBlockchain(c *gin.Context) {
 	}
 
 	// Format return data to be readable
-	data := bch.assemblerService.ToBlockMap(decodedGenesis)
+	data := bch.assemblerService.ToBlockMap(*decodedGenesis)
 
 	if exists {
 		c.JSON(http.StatusOK, gin.H{"message": "Blockchain already exists."})
@@ -87,14 +88,20 @@ func (bch *BlockchainHandler) GetBlockchain(c *gin.Context) {
 
 // Get the first block in block chain
 func (bch *BlockchainHandler) GetGenesisBlock(c *gin.Context) {
-	genesis, err := bch.blockchainService.GetGenesisBlock()
+	genesis, count, err := bch.blockchainService.GetGenesisBlock()
 	if err != nil {
 		log.WithField("error", err.Error()).Error("Error getting genesis block")
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
 
-	formattedGenesis := bch.assemblerService.ToBlockMap(genesis)
+	// Genesis not found
+	if count == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Genesis block was not created"})
+		return
+	}
+
+	formattedGenesis := bch.assemblerService.ToBlockMap(*genesis)
 
 	c.JSON(http.StatusOK, gin.H{"data": formattedGenesis})
 }

@@ -23,6 +23,7 @@ type powService struct {
 	Block          *representations.Block
 	Target         *big.Int
 	blockAssembler BlockAssemblerFac
+	txnAssembler   TxnAssemblerFac
 }
 
 func NewProofOfWorkService(block *representations.Block) PowService {
@@ -35,6 +36,7 @@ func NewProofOfWorkService(block *representations.Block) PowService {
 		Target:         target,
 		Block:          block,
 		blockAssembler: BlockAssembler,
+		txnAssembler:   TxnAssembler,
 	}
 }
 
@@ -63,7 +65,7 @@ func (pow *powService) Solve() (int64, []byte) {
 // sha256 hash the block data and nounce
 func (pow *powService) HashData() []byte {
 	joined := bytes.Join([][]byte{
-		pow.blockAssembler.HashTransactions(pow.Block.Transactions),
+		pow.txnAssembler.HashTransactions(pow.Block.Transactions),
 		pow.Block.PrevHash,
 		utils.Int64ToByte(pow.Block.Timestamp),
 		utils.Int64ToByte(pow.Block.Nounce),

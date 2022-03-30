@@ -1,14 +1,33 @@
 package db
 
-import "github.com/dgraph-io/badger/v3"
+import (
+	// "github.com/jinzhu/gorm"
+	// "github.com/brucetieu/blockchain/models"
+	reps "github.com/brucetieu/blockchain/representations"
+	_ "github.com/jinzhu/gorm/dialects/sqlite"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
+)
 
-var DB *badger.DB
+var DB *gorm.DB
 
 func ConnectDatabase() {
-	badgerDb, err := badger.Open(badger.DefaultOptions("/tmp/blockchain"))
+	// Connect to running postgres container
+	dbURL := "postgres://postgres:pass@localhost:5432/blockchain"
+
+	database, err := gorm.Open(postgres.Open(dbURL), &gorm.Config{})
+
 	if err != nil {
-		panic("Failed to connect to badger db.")
+		panic("Failed to connect to database!")
 	}
 
-	DB = badgerDb
+	database.Logger.LogMode(logger.Info)
+
+	database.AutoMigrate(&reps.Block{})
+	database.AutoMigrate(&reps.Transaction{})
+	database.AutoMigrate(&reps.TxnInput{})
+	database.AutoMigrate(&reps.TxnOutput{})
+
+	DB = database
 }

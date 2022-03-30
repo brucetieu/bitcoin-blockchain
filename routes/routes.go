@@ -9,8 +9,10 @@ import (
 
 func InitRoutes(route *gin.Engine) {
 	services.BlockAssembler = services.NewBlockAssemblerFac()
+	services.TxnAssembler = services.NewTxnAssemblerFac()
+
 	blockchainRepo := repository.NewBlockchainRepository()
-	blockService := services.NewBlockService()
+	blockService := services.NewBlockService(blockchainRepo)
 
 	transactionService := services.NewTransactionService(blockchainRepo)
 	blockchainService := services.NewBlockchainService(blockchainRepo, blockService, transactionService)
