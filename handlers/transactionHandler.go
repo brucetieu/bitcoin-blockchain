@@ -11,11 +11,13 @@ import (
 
 type TransactionHandler struct {
 	transactionService services.TransactionService
+	assemblerService  services.TxnAssemblerFac
 }
 
 func NewTransactionHandler(transactionService services.TransactionService) *TransactionHandler {
 	return &TransactionHandler{
 		transactionService: transactionService,
+		assemblerService: services.TxnAssembler,
 	}
 }
 
@@ -31,4 +33,14 @@ func (th *TransactionHandler) GetBalance(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"address": address, "balance": balance})
+}
+
+func (th *TransactionHandler) GetTransactions(c *gin.Context) {
+	txns, err := th.transactionService.GetTransactions()
+	if err != nil {
+		log.Error("error getting transactions: ", err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	} else {
+		c.JSON(http.StatusOK, gin.H{"transactions": th.assemblerService.ToReadableTransactions(txns)})
+	}
 }

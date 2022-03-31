@@ -9,7 +9,8 @@ import (
 
 type BlockchainRepository interface {
 	CreateTransaction(txn []reps.Transaction) error
-	GetTransactions(blockId string) ([]reps.Transaction, error)
+	GetTransactionsByBlockId(blockId string) ([]reps.Transaction, error)
+	GetTransactions() ([]reps.Transaction, error)
 	// GetTransactionsByTxnId(txnId []byte) ([]reps.Transaction, error)
 
 	CreateBlock(block reps.Block) error
@@ -75,7 +76,7 @@ func (repo *blockchainRepository) GetBlockById(blockId string) (reps.Block, int,
 		return reps.Block{}, -1, res.Error
 	}
 
-	txns, err := repo.GetTransactions(block.ID)
+	txns, err := repo.GetTransactionsByBlockId(block.ID)
 	if err != nil {
 		return reps.Block{}, -1, err
 	}
@@ -85,8 +86,24 @@ func (repo *blockchainRepository) GetBlockById(blockId string) (reps.Block, int,
 	return block, int(res.RowsAffected), nil
 }
 
+func (repo *blockchainRepository) GetTransactions() ([]reps.Transaction, error) {
+	var transactions []reps.Transaction
+
+	err := db.DB.
+		Preload("Inputs").
+		Preload("Outputs").
+		Find(&transactions).
+		Error
+
+	if err != nil {
+		return []reps.Transaction{}, err
+	}
+
+	return transactions, nil
+}
+
 // Get all transactions in a given block.
-func (repo *blockchainRepository) GetTransactions(blockId string) ([]reps.Transaction, error) {
+func (repo *blockchainRepository) GetTransactionsByBlockId(blockId string) ([]reps.Transaction, error) {
 	var transactions []reps.Transaction
 
 	err := db.DB.Where("block_id = ?", blockId).
@@ -160,7 +177,7 @@ func (repo *blockchainRepository) GetGenesisBlock() (reps.Block, int, error) {
 		return reps.Block{}, -1, res.Error
 	}
 
-	txns, err := repo.GetTransactions(genesisBlock.ID)
+	txns, err := repo.GetTransactionsByBlockId(genesisBlock.ID)
 	if err != nil {
 		return reps.Block{}, -1, err
 	}
@@ -191,7 +208,7 @@ func (repo *blockchainRepository) GetBlockchain() ([]reps.Block, error) {
 	for i := 0; i < len(blocks); i++ {
 		blockId := blocks[i].ID
 
-		txns, err := repo.GetTransactions(blockId)
+		txns, err := repo.GetTransactionsByBlockId(blockId)
 		if err != nil {
 			return []reps.Block{}, err
 		}

@@ -38,7 +38,7 @@ func (bch *BlockchainHandler) CreateBlockchain(c *gin.Context) {
 	}
 
 	// Format return data to be readable
-	data := bch.assemblerService.ToBlockMap(*decodedGenesis)
+	data := bch.assemblerService.ToReadableBlock(*decodedGenesis)
 
 	if exists {
 		c.JSON(http.StatusOK, gin.H{"message": "Blockchain already exists."})
@@ -64,7 +64,7 @@ func (bch *BlockchainHandler) AddToBlockchain(c *gin.Context) {
 	}
 
 	// Format return data to be readable
-	data := bch.assemblerService.ToBlockMap(newBlock)
+	data := bch.assemblerService.ToReadableBlock(newBlock)
 
 	c.JSON(http.StatusCreated, gin.H{"data": data})
 }
@@ -77,13 +77,13 @@ func (bch *BlockchainHandler) GetBlockchain(c *gin.Context) {
 		return
 	}
 
-	data := make([]map[string]interface{}, 0)
+	data := make([]reps.ReadableBlock, 0)
 
 	for _, block := range blockchain {
-		data = append(data, bch.assemblerService.ToBlockMap(block))
+		data = append(data, bch.assemblerService.ToReadableBlock(block))
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": data})
+	c.JSON(http.StatusOK, gin.H{"blockchain": data})
 
 }
 
@@ -100,7 +100,7 @@ func (bch *BlockchainHandler) GetGenesisBlock(c *gin.Context) {
 	if count == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Genesis block was not created"})
 	} else {
-		formattedGenesis := bch.assemblerService.ToBlockMap(*genesis)
+		formattedGenesis := bch.assemblerService.ToReadableBlock(*genesis)
 		c.JSON(http.StatusOK, gin.H{"data": formattedGenesis})
 	}
 }
@@ -114,6 +114,6 @@ func (bch *BlockchainHandler) GetBlock(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 	} else {
-		c.JSON(http.StatusOK, gin.H{"data": bch.assemblerService.ToBlockMap(block)})
+		c.JSON(http.StatusOK, gin.H{"data": bch.assemblerService.ToReadableBlock(block)})
 	}
 }

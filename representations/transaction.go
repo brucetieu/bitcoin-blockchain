@@ -14,6 +14,7 @@ type Transaction struct {
 
 type ReadableTransaction struct {
 	ID      string              `json:"id"`
+	BlockID string      `json:"blockId"`
 	Inputs  []ReadableTxnInput  `json:"txnInputs"`
 	Outputs []ReadableTxnOutput `json:"txnOutputs"`
 }
