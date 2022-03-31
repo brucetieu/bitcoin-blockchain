@@ -112,6 +112,7 @@ func (t *txnAssembler) ToCoinbaseTxn(to string, data string) reps.Transaction {
 
 func (a *blockAssembler) ToBlockMap(block reps.Block) map[string]interface{} {
 	data := make(map[string]interface{})
+	data["blockId"] = block.ID
 	data["timestamp"] = block.Timestamp
 	data["prevHash"] = hex.EncodeToString(block.PrevHash)
 	data["hash"] = hex.EncodeToString(block.Hash)

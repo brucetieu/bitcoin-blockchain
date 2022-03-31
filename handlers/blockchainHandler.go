@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	// "fmt"
 	"net/http"
 
 	reps "github.com/brucetieu/blockchain/representations"
@@ -98,10 +99,21 @@ func (bch *BlockchainHandler) GetGenesisBlock(c *gin.Context) {
 	// Genesis not found
 	if count == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Genesis block was not created"})
-		return
+	} else {
+		formattedGenesis := bch.assemblerService.ToBlockMap(*genesis)
+		c.JSON(http.StatusOK, gin.H{"data": formattedGenesis})
 	}
+}
 
-	formattedGenesis := bch.assemblerService.ToBlockMap(*genesis)
+// Get a block given a blockId
+func (bch *BlockchainHandler) GetBlock(c *gin.Context) {
+	blockId := c.Param("blockId")
+	log.Info("Getting block with blockId: ", blockId)
 
-	c.JSON(http.StatusOK, gin.H{"data": formattedGenesis})
+	block, err := bch.blockchainService.GetBlock(blockId)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+	} else {
+		c.JSON(http.StatusOK, gin.H{"data": bch.assemblerService.ToBlockMap(block)})
+	}
 }

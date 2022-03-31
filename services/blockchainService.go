@@ -17,6 +17,7 @@ type BlockchainService interface {
 	CreateBlockchain(to string) (*reps.Block, bool, error)
 	GetBlockchain() ([]reps.Block, error)
 	GetGenesisBlock() (*reps.Block, int, error)
+	GetBlock(blockId string) (reps.Block, error)
 }
 
 type blockchainService struct {
@@ -125,4 +126,18 @@ func (bc *blockchainService) GetGenesisBlock() (*reps.Block, int, error) {
 
 	log.Info("Returned genesis block: ", utils.Pretty(genesis))
 	return &genesis, count, nil
+}
+
+func (bc *blockchainService) GetBlock(blockId string) (reps.Block, error) {
+	block, count, err := bc.blockchainRepo.GetBlockById(blockId)
+	if err != nil {
+		return reps.Block{}, err
+	}
+
+	if count == 0 {
+		log.Error("no block found wth id ", blockId)
+		return reps.Block{}, fmt.Errorf("no block found with id %s", blockId)
+	}
+
+	return block, nil
 }

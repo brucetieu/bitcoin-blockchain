@@ -16,6 +16,7 @@ type BlockchainRepository interface {
 	GetGenesisBlock() (reps.Block, int, error)
 	GetBlockchain() ([]reps.Block, error)
 	GetLastBlock() (reps.Block, error)
+	GetBlockById(blockId string) (reps.Block, int, error)
 
 	CreateTxnOutput(txnOutput reps.TxnOutput) error
 	CreateTxnInput(txnInput reps.TxnInput) error
@@ -61,6 +62,27 @@ func (repo *blockchainRepository) GetLastBlock() (reps.Block, error) {
 	}
 
 	return lastBlock, nil
+}
+
+func (repo *blockchainRepository) GetBlockById(blockId string) (reps.Block, int, error) {
+	var block reps.Block
+
+	res := db.DB.
+		Preload("Transactions").
+		Where("block_id = ?", blockId).
+		Find(&block)
+	if res.Error != nil {
+		return reps.Block{}, -1, res.Error
+	}
+
+	txns, err := repo.GetTransactions(block.ID)
+	if err != nil {
+		return reps.Block{}, -1, err
+	}
+
+	block.Transactions = txns
+
+	return block, int(res.RowsAffected), nil
 }
 
 // Get all transactions in a given block.
