@@ -43,7 +43,7 @@ func (bch *BlockchainHandler) CreateBlockchain(c *gin.Context) {
 	if exists {
 		c.JSON(http.StatusOK, gin.H{"message": "Blockchain already exists."})
 	} else {
-		c.JSON(http.StatusCreated, gin.H{"data": data, "message": "Blockchain created."})
+		c.JSON(http.StatusCreated, gin.H{"block": data, "message": "Blockchain created."})
 	}
 }
 
@@ -66,7 +66,7 @@ func (bch *BlockchainHandler) AddToBlockchain(c *gin.Context) {
 	// Format return data to be readable
 	data := bch.assemblerService.ToReadableBlock(newBlock)
 
-	c.JSON(http.StatusCreated, gin.H{"data": data})
+	c.JSON(http.StatusCreated, gin.H{"block": data})
 }
 
 // Print out all blocks in blockchain
@@ -89,20 +89,23 @@ func (bch *BlockchainHandler) GetBlockchain(c *gin.Context) {
 
 // Get the first block in block chain
 func (bch *BlockchainHandler) GetGenesisBlock(c *gin.Context) {
-	genesis, count, err := bch.blockchainService.GetGenesisBlock()
+	genesis, err := bch.blockchainService.GetGenesisBlock()
 	if err != nil {
 		log.WithField("error", err.Error()).Error("Error getting genesis block")
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		return
+	} else {
+		formattedGenesis := bch.assemblerService.ToReadableBlock(*genesis)
+		c.JSON(http.StatusOK, gin.H{"genesis": formattedGenesis})
 	}
 
 	// Genesis not found
-	if count == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Genesis block was not created"})
-	} else {
-		formattedGenesis := bch.assemblerService.ToReadableBlock(*genesis)
-		c.JSON(http.StatusOK, gin.H{"data": formattedGenesis})
-	}
+	// if count == 0 {
+	// 	c.JSON(http.StatusNotFound, gin.H{"error": "Genesis block was not created"})
+	// } 
+	// else {
+	// 	formattedGenesis := bch.assemblerService.ToReadableBlock(*genesis)
+	// 	c.JSON(http.StatusOK, gin.H{"data": formattedGenesis})
+	// }
 }
 
 // Get a block given a blockId
@@ -114,6 +117,6 @@ func (bch *BlockchainHandler) GetBlock(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 	} else {
-		c.JSON(http.StatusOK, gin.H{"data": bch.assemblerService.ToReadableBlock(block)})
+		c.JSON(http.StatusOK, gin.H{"block": bch.assemblerService.ToReadableBlock(block)})
 	}
 }

@@ -11,13 +11,14 @@ type BlockchainRepository interface {
 	CreateTransaction(txn []reps.Transaction) error
 	GetTransactionsByBlockId(blockId string) ([]reps.Transaction, error)
 	GetTransactions() ([]reps.Transaction, error)
+	GetTransaction(txnId []byte) (reps.Transaction, error)
 	// GetTransactionsByTxnId(txnId []byte) ([]reps.Transaction, error)
 
 	CreateBlock(block reps.Block) error
-	GetGenesisBlock() (reps.Block, int, error)
+	GetGenesisBlock() (reps.Block, error)
 	GetBlockchain() ([]reps.Block, error)
 	GetLastBlock() (reps.Block, error)
-	GetBlockById(blockId string) (reps.Block, int, error)
+	GetBlockById(blockId string) (reps.Block, error)
 
 	CreateTxnOutput(txnOutput reps.TxnOutput) error
 	CreateTxnInput(txnInput reps.TxnInput) error
@@ -53,11 +54,11 @@ func (repo *blockchainRepository) CreateTransaction(txn []reps.Transaction) erro
 	return nil
 }
 
-// Get the last (non genesis) block in the blockchain
+// Get the last block in the blockchain
 func (repo *blockchainRepository) GetLastBlock() (reps.Block, error) {
 	var lastBlock reps.Block
 
-	err := db.DB.Limit(1).Order("timestamp desc").Find(&lastBlock).Error
+	err := db.DB.Limit(1).Order("timestamp desc").First(&lastBlock).Error
 	if err != nil {
 		return reps.Block{}, err
 	}
@@ -65,27 +66,28 @@ func (repo *blockchainRepository) GetLastBlock() (reps.Block, error) {
 	return lastBlock, nil
 }
 
-func (repo *blockchainRepository) GetBlockById(blockId string) (reps.Block, int, error) {
+// Get a block in the block chain by blockId
+func (repo *blockchainRepository) GetBlockById(blockId string) (reps.Block, error) {
 	var block reps.Block
 
 	res := db.DB.
-		Preload("Transactions").
 		Where("block_id = ?", blockId).
-		Find(&block)
+		First(&block)
 	if res.Error != nil {
-		return reps.Block{}, -1, res.Error
+		return reps.Block{}, res.Error
 	}
 
 	txns, err := repo.GetTransactionsByBlockId(block.ID)
 	if err != nil {
-		return reps.Block{}, -1, err
+		return reps.Block{}, err
 	}
 
 	block.Transactions = txns
 
-	return block, int(res.RowsAffected), nil
+	return block, nil
 }
 
+// Get all transactions
 func (repo *blockchainRepository) GetTransactions() ([]reps.Transaction, error) {
 	var transactions []reps.Transaction
 
@@ -100,6 +102,22 @@ func (repo *blockchainRepository) GetTransactions() ([]reps.Transaction, error) 
 	}
 
 	return transactions, nil
+}
+
+// Get a single transaction
+func (repo *blockchainRepository) GetTransaction(txnId []byte) (reps.Transaction, error) {
+	var transaction reps.Transaction
+
+	res := db.DB.Where("id = ?", txnId).
+		Preload("Inputs").
+		Preload("Outputs").
+		First(&transaction)
+
+	if res.Error != nil {
+		return reps.Transaction{}, res.Error
+	}
+
+	return transaction, nil
 }
 
 // Get all transactions in a given block.
@@ -118,22 +136,6 @@ func (repo *blockchainRepository) GetTransactionsByBlockId(blockId string) ([]re
 
 	return transactions, nil
 }
-
-// func (repo *blockchainRepository) GetTransactionsByTxnId(txnId []byte) ([]reps.Transaction, error) {
-// 	var transactions []reps.Transaction
-
-// 	err := db.DB.Where("id = ?", txnId).
-// 		Preload("Inputs").
-// 		Preload("Outputs").
-// 		Find(&transactions).
-// 		Error
-
-// 	if err != nil {
-// 		return []reps.Transaction{}, err
-// 	}
-
-// 	return transactions, nil
-// }
 
 // Get all transaction inputs for a given transaction
 func (repo *blockchainRepository) GetTxnInputs(txnId []byte) ([]reps.TxnInput, error) {
@@ -166,25 +168,24 @@ func (repo *blockchainRepository) GetTxnOutputs(txnId []byte) ([]reps.TxnOutput,
 }
 
 // Get the first block in the blockchain
-func (repo *blockchainRepository) GetGenesisBlock() (reps.Block, int, error) {
+func (repo *blockchainRepository) GetGenesisBlock() (reps.Block, error) {
 	var genesisBlock reps.Block
 
 	res := db.DB.
-		Preload("Transactions").
 		Where("prev_hash = ''").
-		Find(&genesisBlock)
+		First(&genesisBlock)
 	if res.Error != nil {
-		return reps.Block{}, -1, res.Error
+		return reps.Block{}, res.Error
 	}
 
 	txns, err := repo.GetTransactionsByBlockId(genesisBlock.ID)
 	if err != nil {
-		return reps.Block{}, -1, err
+		return reps.Block{}, err
 	}
 
 	genesisBlock.Transactions = txns
 
-	return genesisBlock, int(res.RowsAffected), nil
+	return genesisBlock, nil
 
 }
 
@@ -196,6 +197,7 @@ func (repo *blockchainRepository) CreateBlock(block reps.Block) error {
 	return nil
 }
 
+// Get all blocks in blockchain
 func (repo *blockchainRepository) GetBlockchain() ([]reps.Block, error) {
 	var blocks []reps.Block
 

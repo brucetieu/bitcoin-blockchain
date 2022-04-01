@@ -38,6 +38,7 @@ func NewTxnAssemblerFac() TxnAssemblerFac {
 type TxnAssemblerFac interface {
 	HashTransactions(txns []reps.Transaction) []byte
 	ToReadableTransactions(txns []reps.Transaction) []reps.ReadableTransaction
+	ToReadableTransaction(txn reps.Transaction) reps.ReadableTransaction
 	ToCoinbaseTxn(to string, data string) reps.Transaction
 	SetID(txnRep reps.Transaction) []byte
 }
@@ -196,4 +197,37 @@ func (t *txnAssembler) ToReadableTransactions(txns []reps.Transaction) []reps.Re
 	}
 
 	return transactions
+}
+
+func (t *txnAssembler) ToReadableTransaction(txn reps.Transaction) reps.ReadableTransaction {
+	readableTxn := reps.ReadableTransaction{
+		ID: hex.EncodeToString(txn.ID),
+		BlockID: txn.BlockID,
+	}
+
+	var inputs []reps.ReadableTxnInput
+	for _, in := range txn.Inputs {
+		input := reps.ReadableTxnInput{
+			CurrTxnID: hex.EncodeToString(txn.ID),
+			PrevTxnID: hex.EncodeToString(in.PrevTxnID),
+			OutIdx:    in.OutIdx,
+			ScriptSig: in.ScriptSig,
+		}
+		inputs = append(inputs, input)
+	}
+
+	var outputs []reps.ReadableTxnOutput
+	for _, out := range txn.Outputs {
+		output := reps.ReadableTxnOutput{
+			CurrTxnID:    hex.EncodeToString(txn.ID),
+			Value:        out.Value,
+			ScriptPubKey: out.ScriptPubKey,
+		}
+		outputs = append(outputs, output)
+	}
+
+	readableTxn.Inputs = inputs
+	readableTxn.Outputs = outputs
+
+	return readableTxn
 }

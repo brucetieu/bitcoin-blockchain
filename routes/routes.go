@@ -31,6 +31,6 @@ func InitRoutes(route *gin.Engine) {
 	// groupRoute.GET("/blockchain/balances")
 	// groupRoute.GET("/blockchain/addresses", blockchainHandler.GetAddresses)
 	groupRoute.GET("/blockchain/transactions", transactionHandler.GetTransactions)
-	// groupRoute.GET("/blockchain/transactions/:transactionId")
+	groupRoute.GET("/blockchain/transaction/:transactionId", transactionHandler.GetTransaction)
 
 }

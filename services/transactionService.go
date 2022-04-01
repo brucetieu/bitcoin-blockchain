@@ -23,6 +23,7 @@ type TransactionService interface {
 	CreateTransaction(from string, to string, amount int) (reps.Transaction, error)
 
 	GetTransactions() ([]reps.Transaction, error)
+	GetTransaction(txnId string) (reps.Transaction, error)
 	GetUnspentTransactions(address string) []reps.Transaction
 	GetUnspentTxnOutputs(address string) []reps.TxnOutput
 	GetSpendableOutputs(from string, amount int) (int, map[string][]int)
@@ -138,6 +139,26 @@ func (ts *transactionService) CreateTransaction(from string, to string, amount i
 	transaction.ID = txnId
 
 	return transaction, nil
+}
+
+func (tx *transactionService) GetTransaction(txnId string) (reps.Transaction, error) {
+	txnIdByte, err := hex.DecodeString(txnId)
+	if err != nil {
+		log.Error("error decoding string to byte: ", err.Error())
+		// return reps.Transaction{}, err
+	}
+
+	txn, err := tx.blockchainRepo.GetTransaction(txnIdByte)
+	if err != nil {
+		errMsg := fmt.Errorf("%s, id: %s", err.Error(), txnId)
+		return reps.Transaction{}, errMsg
+	}
+
+	// if count == 0 {
+	// 	return reps.Transaction{}, fmt.Errorf("the transaction with the id of %s was not found", txnId)
+	// }
+
+	return txn, nil
 }
 
 func (ts *transactionService) GetTransactions() ([]reps.Transaction, error) {

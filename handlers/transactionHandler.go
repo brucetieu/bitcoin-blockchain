@@ -44,3 +44,15 @@ func (th *TransactionHandler) GetTransactions(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"transactions": th.assemblerService.ToReadableTransactions(txns)})
 	}
 }
+
+func (th *TransactionHandler) GetTransaction(c *gin.Context) {
+	txnId := c.Param("transactionId")
+
+	txn, err := th.transactionService.GetTransaction(txnId)
+	if err != nil {
+		log.Error("error getting transaction: ", err.Error())
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+	} else {
+		c.JSON(http.StatusOK, gin.H{"transaction": th.assemblerService.ToReadableTransaction(txn)})
+	}
+}
