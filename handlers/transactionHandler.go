@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/brucetieu/blockchain/services"
@@ -25,14 +26,27 @@ func (th *TransactionHandler) GetBalance(c *gin.Context) {
 	address := c.Param("address")
 	balance := 0
 
-	unspentTxnOutputs := th.transactionService.GetUnspentTxnOutputs(address)
-	log.Info("unspentTxnOutputs in GetBalance: ", utils.Pretty(unspentTxnOutputs))
-
-	for _, unspentOutput := range unspentTxnOutputs {
-		balance += unspentOutput.Value
+	addresses, err := th.transactionService.GetAddresses()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"address": address, "balance": balance})
+	if _, exists := addresses[address]; exists {
+		unspentTxnOutputs := th.transactionService.GetUnspentTxnOutputs(address)
+		log.Info("unspentTxnOutputs in GetBalance: ", utils.Pretty(unspentTxnOutputs))
+	
+		for _, unspentOutput := range unspentTxnOutputs {
+			balance += unspentOutput.Value
+		}
+	
+		c.JSON(http.StatusOK, gin.H{"address": address, "balance": balance})
+	} else {
+		errMsg := fmt.Errorf("could not get balance: address %s was not found", address)
+		log.Error(errMsg)
+		c.JSON(http.StatusNotFound, gin.H{"error": errMsg.Error()})
+	}
+
 }
 
 func (th *TransactionHandler) GetTransactions(c *gin.Context) {
