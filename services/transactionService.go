@@ -33,6 +33,8 @@ type TransactionService interface {
 	IsCoinbaseTransaction(txn reps.Transaction) bool
 
 	GetAddresses() (map[string]bool, error)
+	GetBalance(address string) (int, error)
+	GetBalances() ([]reps.AddressBalance, error)
 }
 
 type transactionService struct {
@@ -180,6 +182,53 @@ func (ts *transactionService) GetAddresses() (map[string]bool, error) {
 	}
 
 	return addresses, nil
+}
+
+func (ts *transactionService) GetBalance(address string) (int, error) {
+	balance := 0
+
+	addresses, err := ts.GetAddresses()
+	if err != nil {
+		return -1, err
+	}
+
+	if _, exists := addresses[address]; exists {
+		unspentTxnOutputs := ts.GetUnspentTxnOutputs(address)
+		log.Info("unspentTxnOutputs in GetBalance: ", utils.Pretty(unspentTxnOutputs))
+	
+		for _, unspentOutput := range unspentTxnOutputs {
+			balance += unspentOutput.Value
+		}
+	
+	} else {
+		errMsg := fmt.Errorf("could not get balance: address %s was not found", address)
+		return -1, errMsg
+	}
+
+	return balance, nil
+}
+
+func (ts *transactionService) GetBalances() ([]reps.AddressBalance, error) {
+	addresses, err := ts.GetAddresses()
+	if err != nil {
+		return []reps.AddressBalance{}, err
+	}
+
+	balances := make([]reps.AddressBalance, 0)
+
+	for key := range addresses {
+		balance := 0
+		unspentTxnOutputs := ts.GetUnspentTxnOutputs(key)
+		log.Info("unspentTxnOutputs in GetBalance: ", utils.Pretty(unspentTxnOutputs))
+	
+		for _, unspentOutput := range unspentTxnOutputs {
+			balance += unspentOutput.Value
+		}
+
+		balances = append(balances, reps.AddressBalance{key, balance})
+	}
+
+	return balances, nil
 }
 
 // Find out how much of the unspendable outputs from the sender can be spent given an amount

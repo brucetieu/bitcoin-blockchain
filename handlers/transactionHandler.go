@@ -1,11 +1,12 @@
 package handlers
 
 import (
-	"fmt"
+	// "fmt"
 	"net/http"
 
+	// "github.com/brucetieu/blockchain/representations"
 	"github.com/brucetieu/blockchain/services"
-	"github.com/brucetieu/blockchain/utils"
+	// "github.com/brucetieu/blockchain/utils"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
@@ -22,30 +23,48 @@ func NewTransactionHandler(transactionService services.TransactionService) *Tran
 	}
 }
 
+func (th *TransactionHandler) GetBalances(c *gin.Context) {
+	balances, err := th.transactionService.GetBalances()
+	if err != nil {
+		log.Error("error getting balances: ", err.Error())
+		c.JSON(http.StatusInternalServerError, err.Error())
+	} else {
+		c.JSON(http.StatusOK, gin.H{"balances": balances})
+	}
+}
+
 func (th *TransactionHandler) GetBalance(c *gin.Context) {
 	address := c.Param("address")
-	balance := 0
 
-	addresses, err := th.transactionService.GetAddresses()
+	balance, err := th.transactionService.GetBalance(address)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	if _, exists := addresses[address]; exists {
-		unspentTxnOutputs := th.transactionService.GetUnspentTxnOutputs(address)
-		log.Info("unspentTxnOutputs in GetBalance: ", utils.Pretty(unspentTxnOutputs))
-	
-		for _, unspentOutput := range unspentTxnOutputs {
-			balance += unspentOutput.Value
-		}
-	
-		c.JSON(http.StatusOK, gin.H{"address": address, "balance": balance})
+		log.Error("error getting balance: ", err.Error())
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 	} else {
-		errMsg := fmt.Errorf("could not get balance: address %s was not found", address)
-		log.Error(errMsg)
-		c.JSON(http.StatusNotFound, gin.H{"error": errMsg.Error()})
+		c.JSON(http.StatusOK, gin.H{"address": address, "balance": balance})
 	}
+	// balance := 0
+
+	// addresses, err := th.transactionService.GetAddresses()
+	// if err != nil {
+	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	// 	return
+	// }
+
+	// if _, exists := addresses[address]; exists {
+	// 	unspentTxnOutputs := th.transactionService.GetUnspentTxnOutputs(address)
+	// 	log.Info("unspentTxnOutputs in GetBalance: ", utils.Pretty(unspentTxnOutputs))
+	
+	// 	for _, unspentOutput := range unspentTxnOutputs {
+	// 		balance += unspentOutput.Value
+	// 	}
+	
+	// 	c.JSON(http.StatusOK, gin.H{"address": address, "balance": balance})
+	// } else {
+	// 	errMsg := fmt.Errorf("could not get balance: address %s was not found", address)
+	// 	log.Error(errMsg)
+	// 	c.JSON(http.StatusNotFound, gin.H{"error": errMsg.Error()})
+	// }
 
 }
 
