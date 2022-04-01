@@ -56,3 +56,13 @@ func (th *TransactionHandler) GetTransaction(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"transaction": th.assemblerService.ToReadableTransaction(txn)})
 	}
 }
+
+func (th *TransactionHandler) GetAddresses(c *gin.Context) {
+	addresses, err := th.transactionService.GetAddresses()
+	if err != nil {
+		log.Error("error getting all addresses in transactions: ", err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	} else {
+		c.JSON(http.StatusOK, gin.H{"addresses": addresses})
+	}
+}

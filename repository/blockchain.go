@@ -12,6 +12,7 @@ type BlockchainRepository interface {
 	GetTransactionsByBlockId(blockId string) ([]reps.Transaction, error)
 	GetTransactions() ([]reps.Transaction, error)
 	GetTransaction(txnId []byte) (reps.Transaction, error)
+	GetAddresses() (map[string]bool, error)
 	// GetTransactionsByTxnId(txnId []byte) ([]reps.Transaction, error)
 
 	CreateBlock(block reps.Block) error
@@ -22,8 +23,8 @@ type BlockchainRepository interface {
 
 	CreateTxnOutput(txnOutput reps.TxnOutput) error
 	CreateTxnInput(txnInput reps.TxnInput) error
-	GetTxnInputs(txnId []byte) ([]reps.TxnInput, error)
-	GetTxnOutputs(txnId []byte) ([]reps.TxnOutput, error)
+	// GetTxnInputs(txnId []byte) ([]reps.TxnInput, error)
+	// GetTxnOutputs(txnId []byte) ([]reps.TxnOutput, error)
 }
 
 type blockchainRepository struct {
@@ -52,6 +53,34 @@ func (repo *blockchainRepository) CreateTransaction(txn []reps.Transaction) erro
 		return err
 	}
 	return nil
+}
+
+func (repo *blockchainRepository) GetAddresses() (map[string]bool, error) {
+	// Raw SQL
+	addresses := make(map[string]bool)
+	var address string
+
+	rows, err := db.DB.Raw("SELECT DISTINCT script_pub_key FROM txn_outputs").Rows()
+	if err != nil {
+		return addresses, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		rows.Scan(&address)
+		addresses[address] = true
+	}
+	// var addresses []string
+
+	// err := db.DB.
+	// 	Raw("SELECT DISTINCT script_pub_key FROM txn_outputs").
+	// 	Scan(&addresses).
+	// 	Error
+	
+	// if err != nil {
+	// 	return []string{}, err
+	// }
+
+	return addresses, nil
 }
 
 // Get the last block in the blockchain

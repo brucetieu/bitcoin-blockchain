@@ -120,3 +120,4 @@ func (bch *BlockchainHandler) GetBlock(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"block": bch.assemblerService.ToReadableBlock(block)})
 	}
 }
+

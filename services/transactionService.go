@@ -31,6 +31,8 @@ type TransactionService interface {
 	CanUnlock(input reps.TxnInput, data string) bool
 	CanBeUnlockedWith(output reps.TxnOutput, data string) bool
 	IsCoinbaseTransaction(txn reps.Transaction) bool
+
+	GetAddresses() (map[string]bool, error)
 }
 
 type transactionService struct {
@@ -168,6 +170,16 @@ func (ts *transactionService) GetTransactions() ([]reps.Transaction, error) {
 	}
 
 	return txns, nil
+}
+
+func (ts *transactionService) GetAddresses() (map[string]bool, error) {
+	addresses, err := ts.blockchainRepo.GetAddresses()
+	if err != nil {
+		log.Error("error getting addresses: ", err.Error())
+		return addresses, err
+	}
+
+	return addresses, nil
 }
 
 // Find out how much of the unspendable outputs from the sender can be spent given an amount
