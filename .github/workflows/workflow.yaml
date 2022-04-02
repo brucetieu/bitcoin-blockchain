@@ -51,10 +51,10 @@ jobs:
         golint .
 
     # format code
-    - name: Golang Formatter
-      uses: brucetieu/auto-go-format@master
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    # - name: Golang Formatter
+    #   uses: brucetieu/auto-go-format@master
+    #   env:
+    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
     # Run testing on the code
     - name: Run testing
