@@ -2,7 +2,6 @@ package repository
 
 import (
 	"github.com/brucetieu/blockchain/db"
-	// "github.com/brucetieu/blockchain/utils"
 
 	reps "github.com/brucetieu/blockchain/representations"
 )
@@ -13,7 +12,6 @@ type BlockchainRepository interface {
 	GetTransactions() ([]reps.Transaction, error)
 	GetTransaction(txnId []byte) (reps.Transaction, error)
 	GetAddresses() (map[string]bool, error)
-	// GetTransactionsByTxnId(txnId []byte) ([]reps.Transaction, error)
 
 	CreateBlock(block reps.Block) error
 	GetGenesisBlock() (reps.Block, error)
@@ -55,8 +53,8 @@ func (repo *blockchainRepository) CreateTransaction(txn []reps.Transaction) erro
 	return nil
 }
 
+// Get all distinct addresses
 func (repo *blockchainRepository) GetAddresses() (map[string]bool, error) {
-	// Raw SQL
 	addresses := make(map[string]bool)
 	var address string
 
@@ -69,16 +67,6 @@ func (repo *blockchainRepository) GetAddresses() (map[string]bool, error) {
 		rows.Scan(&address)
 		addresses[address] = true
 	}
-	// var addresses []string
-
-	// err := db.DB.
-	// 	Raw("SELECT DISTINCT script_pub_key FROM txn_outputs").
-	// 	Scan(&addresses).
-	// 	Error
-	
-	// if err != nil {
-	// 	return []string{}, err
-	// }
 
 	return addresses, nil
 }
@@ -87,10 +75,21 @@ func (repo *blockchainRepository) GetAddresses() (map[string]bool, error) {
 func (repo *blockchainRepository) GetLastBlock() (reps.Block, error) {
 	var lastBlock reps.Block
 
-	err := db.DB.Limit(1).Order("timestamp desc").First(&lastBlock).Error
+	err := db.DB.
+		Limit(1).
+		Order("timestamp desc").
+		First(&lastBlock).
+		Error
 	if err != nil {
 		return reps.Block{}, err
 	}
+
+	txns, err := repo.GetTransactionsByBlockId(lastBlock.ID)
+	if err != nil {
+		return reps.Block{}, err
+	}
+
+	lastBlock.Transactions = txns
 
 	return lastBlock, nil
 }
@@ -137,7 +136,8 @@ func (repo *blockchainRepository) GetTransactions() ([]reps.Transaction, error) 
 func (repo *blockchainRepository) GetTransaction(txnId []byte) (reps.Transaction, error) {
 	var transaction reps.Transaction
 
-	res := db.DB.Where("id = ?", txnId).
+	res := db.DB.
+		Where("id = ?", txnId).
 		Preload("Inputs").
 		Preload("Outputs").
 		First(&transaction)
@@ -218,6 +218,7 @@ func (repo *blockchainRepository) GetGenesisBlock() (reps.Block, error) {
 
 }
 
+// Save block to db
 func (repo *blockchainRepository) CreateBlock(block reps.Block) error {
 	if err := db.DB.Create(&block).Error; err != nil {
 		return err

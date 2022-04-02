@@ -73,6 +73,7 @@ func (t *txnAssembler) HashTransactions(txns []reps.Transaction) []byte {
 	return hashedTxns[:]
 }
 
+// Create txn id
 func (t *txnAssembler) SetID(txnRep reps.Transaction) []byte {
 	txnRepInBytes, err := json.Marshal(txnRep)
 	if err != nil {

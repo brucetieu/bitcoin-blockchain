@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	// "fmt"
 	"net/http"
 
 	reps "github.com/brucetieu/blockchain/representations"
@@ -38,7 +37,7 @@ func (bch *BlockchainHandler) CreateBlockchain(c *gin.Context) {
 	}
 
 	// Format return data to be readable
-	data := bch.assemblerService.ToReadableBlock(*decodedGenesis)
+	data := bch.assemblerService.ToReadableBlock(decodedGenesis)
 
 	if exists {
 		c.JSON(http.StatusOK, gin.H{"message": "Blockchain already exists."})
@@ -94,18 +93,9 @@ func (bch *BlockchainHandler) GetGenesisBlock(c *gin.Context) {
 		log.WithField("error", err.Error()).Error("Error getting genesis block")
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 	} else {
-		formattedGenesis := bch.assemblerService.ToReadableBlock(*genesis)
+		formattedGenesis := bch.assemblerService.ToReadableBlock(genesis)
 		c.JSON(http.StatusOK, gin.H{"genesis": formattedGenesis})
 	}
-
-	// Genesis not found
-	// if count == 0 {
-	// 	c.JSON(http.StatusNotFound, gin.H{"error": "Genesis block was not created"})
-	// } 
-	// else {
-	// 	formattedGenesis := bch.assemblerService.ToReadableBlock(*genesis)
-	// 	c.JSON(http.StatusOK, gin.H{"data": formattedGenesis})
-	// }
 }
 
 // Get a block given a blockId
@@ -118,6 +108,19 @@ func (bch *BlockchainHandler) GetBlock(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 	} else {
 		c.JSON(http.StatusOK, gin.H{"block": bch.assemblerService.ToReadableBlock(block)})
+	}
+}
+
+// Get last block in blockchain. If it's a genesis, it will return it. 
+func (bch *BlockchainHandler) GetLastBlock(c *gin.Context) {
+	log.Info("Getting last block...")
+
+	lastBlock, err := bch.blockchainService.GetLastBlock()
+	if err != nil {
+		log.Error(err.Error())
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+	} else {
+		c.JSON(http.StatusOK, gin.H{"block": bch.assemblerService.ToReadableBlock(lastBlock)})
 	}
 }
 

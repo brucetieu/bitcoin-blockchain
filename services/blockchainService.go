@@ -14,10 +14,11 @@ import (
 
 type BlockchainService interface {
 	AddToBlockChain(from string, to string, amount int) (reps.Block, error)
-	CreateBlockchain(to string) (*reps.Block, bool, error)
+	CreateBlockchain(to string) (reps.Block, bool, error)
 	GetBlockchain() ([]reps.Block, error)
-	GetGenesisBlock() (*reps.Block, error)
+	GetGenesisBlock() (reps.Block, error)
 	GetBlock(blockId string) (reps.Block, error)
+	GetLastBlock() (reps.Block, error)
 }
 
 type blockchainService struct {
@@ -37,7 +38,7 @@ func NewBlockchainService(blockchainRepo repository.BlockchainRepository,
 	}
 }
 
-func (bc *blockchainService) CreateBlockchain(to string) (*reps.Block, bool, error) {
+func (bc *blockchainService) CreateBlockchain(to string) (reps.Block, bool, error) {
 	// Try to get genesis block
 	genesis, err := bc.GetGenesisBlock()
 	if err != nil {
@@ -46,46 +47,19 @@ func (bc *blockchainService) CreateBlockchain(to string) (*reps.Block, bool, err
 		newBlock, err := bc.blockService.CreateBlock([]reps.Transaction{coinbaseTxn}, []byte{})
 
 		// Persist
-		// err = bc.blockchainRepo.CreateBlock(newBlock)
 		if err != nil {
 			log.Error("Error creating blockchain: ", err.Error())
-			return &reps.Block{}, false, err
+			return reps.Block{}, false, err
 		}
 
-		return &newBlock, false, nil
+		return newBlock, false, nil
 	}
-
-	// // Genesis doesn't exist, so create it.
-	// if count == 0 {
-	// 	log.Info("Genesis doesn't exist, so creating it now...")
-	// 	coinbaseTxn := bc.transactionService.CreateCoinbaseTxn(to, "First transaction in Blockchain")
-	// 	newBlock, err := bc.blockService.CreateBlock([]reps.Transaction{coinbaseTxn}, []byte{})
-
-	// 	// Persist
-	// 	// err = bc.blockchainRepo.CreateBlock(newBlock)
-	// 	if err != nil {
-	// 		log.Error("Error creating blockchain: ", err.Error())
-	// 		return &reps.Block{}, false, err
-	// 	}
-
-	// 	return &newBlock, false, nil
-	// }
 
 	// Genesis does exist, so return it
 	return genesis, true, nil
 }
 
 func (bc *blockchainService) AddToBlockChain(from string, to string, amount int) (reps.Block, error) {
-	// Check genesis exists first before adding block
-	// _, err := bc.GetGenesisBlock()
-	// if err != nil {
-	// 	return reps.Block{}, err
-	// }
-
-	// if count == 0 {
-	// 	return reps.Block{}, fmt.Errorf("Cannot add to blockchain without Genesis block")
-	// }
-
 	// Check if there is at least a genesis block in the blockchain
 	lastBlock, err := bc.blockchainRepo.GetLastBlock()
 	if err != nil {
@@ -95,8 +69,11 @@ func (bc *blockchainService) AddToBlockChain(from string, to string, amount int)
 
 	// Create a new transaction
 	newTxn, err := bc.transactionService.CreateTransaction(from, to, amount)
+	if err != nil {
+		return reps.Block{}, err
+	}
 
-	// Create a new block and persist
+	// Create a new block with new transaction and persist
 	newBlock, err := bc.blockService.CreateBlock([]reps.Transaction{newTxn}, lastBlock.Hash)
 	if err != nil {
 		return reps.Block{}, err
@@ -122,18 +99,18 @@ func (bc *blockchainService) GetBlockchain() ([]reps.Block, error) {
 }
 
 // Get the first block in the block chain.
-func (bc *blockchainService) GetGenesisBlock() (*reps.Block, error) {
+func (bc *blockchainService) GetGenesisBlock() (reps.Block, error) {
 	log.Info("Getting Genesis Block...")
 
 	// Get Genesis block from db
 	genesis, err := bc.blockchainRepo.GetGenesisBlock()
 	if err != nil {
 		errMsg := fmt.Errorf("%s, genesis does not exist", err.Error())
-		return &reps.Block{}, errMsg
+		return reps.Block{}, errMsg
 	}
 
 	log.Info("Returned genesis block: ", utils.Pretty(genesis))
-	return &genesis, nil
+	return genesis, nil
 }
 
 func (bc *blockchainService) GetBlock(blockId string) (reps.Block, error) {
@@ -144,10 +121,15 @@ func (bc *blockchainService) GetBlock(blockId string) (reps.Block, error) {
 		return reps.Block{}, errMsg
 	}
 
-	// if count == 0 {
-	// 	log.Error("no block found wth id ", blockId)
-	// 	return reps.Block{}, fmt.Errorf("no block found with id %s", blockId)
-	// }
-
 	return block, nil
+}
+
+func (bc *blockchainService) GetLastBlock() (reps.Block, error) {
+	lastBlock, err := bc.blockchainRepo.GetLastBlock()
+	if err != nil {
+		errMsg := fmt.Errorf("%s, genesis does not exist", err.Error())
+		return reps.Block{}, errMsg
+	}
+
+	return lastBlock, nil
 }

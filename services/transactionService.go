@@ -158,10 +158,6 @@ func (tx *transactionService) GetTransaction(txnId string) (reps.Transaction, er
 		return reps.Transaction{}, errMsg
 	}
 
-	// if count == 0 {
-	// 	return reps.Transaction{}, fmt.Errorf("the transaction with the id of %s was not found", txnId)
-	// }
-
 	return txn, nil
 }
 
