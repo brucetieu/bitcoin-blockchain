@@ -21,6 +21,9 @@ func InitRoutes(route *gin.Engine) {
 	transactionHandler := handlers.NewTransactionHandler(transactionService)
 
 	groupRoute := route.Group("/")
+
+	groupRoute.GET("/", blockchainHandler.BlockchainHome)
+	
 	groupRoute.POST("/blockchain", blockchainHandler.CreateBlockchain)
 	groupRoute.GET("/blockchain", blockchainHandler.GetBlockchain)
 	groupRoute.POST("/blockchain/block", blockchainHandler.AddToBlockchain)

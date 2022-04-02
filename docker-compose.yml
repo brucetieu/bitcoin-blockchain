@@ -1,6 +1,21 @@
 version: "3.8"
 
 services:
+  app:
+    container_name: blockchain_app
+
+    # This is used to build the Dockerfile when "docker-compose up" is ran
+    build: .
+    ports: 
+      - 8080:8080
+    restart: on-failure
+    volumes:
+      - api:/usr/src/app/
+    depends_on:
+      - database
+    networks:
+      - blockchain
+
   database:
     container_name: database
     image: postgres:14
@@ -13,6 +28,14 @@ services:
       - 5432:5432
     volumes:
       - db:/var/lib/postgresql/data 
+    networks:
+      - blockchain
 
 volumes:
   db:
+  api:
+
+# Networks to be created to facilitate communication between containers
+networks:
+  blockchain:
+    driver: bridge
