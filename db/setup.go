@@ -13,8 +13,8 @@ import (
 var DB *gorm.DB
 
 func ConnectDatabase() {
-	// Connect to running postgres container
-	dbURL := "postgres://postgres:pass@localhost:5432/blockchain"
+	// Connect to running postgres container. database is the container name
+	dbURL := "postgres://postgres:pass@database:5432/blockchain"
 
 	database, err := gorm.Open(postgres.Open(dbURL), &gorm.Config{})
 

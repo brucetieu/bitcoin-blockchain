@@ -21,6 +21,11 @@ func NewBlockchainHandler(blockchainService services.BlockchainService) *Blockch
 	}
 }
 
+func (bch *BlockchainHandler) BlockchainHome(c *gin.Context) {
+	log.Info("Checking if blockchain is up...")
+	c.JSON(http.StatusOK, "Blockchain healthy")
+}
+
 func (bch *BlockchainHandler) CreateBlockchain(c *gin.Context) {
 	log.Info("Creating Blockchain")
 	// Validate input

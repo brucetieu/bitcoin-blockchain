@@ -19,6 +19,7 @@ func main() {
 
 	routes.InitRoutes(router)
 
+	// port :8080 by default
 	router.Run()
 
 	// for _, block := range bc.Blocks {
