@@ -28,7 +28,7 @@ func NewBlockAssemblerFac() BlockAssemblerFac {
 type BlockAssemblerFac interface {
 	ToBlockBytes(block *reps.Block) []byte
 	ToBlockStructure(data []byte) *reps.Block
-	ToBlockMap(block reps.Block) map[string]interface{}
+	ToReadableBlock(block reps.Block) reps.ReadableBlock
 }
 
 func NewTxnAssemblerFac() TxnAssemblerFac {
@@ -37,6 +37,8 @@ func NewTxnAssemblerFac() TxnAssemblerFac {
 
 type TxnAssemblerFac interface {
 	HashTransactions(txns []reps.Transaction) []byte
+	ToReadableTransactions(txns []reps.Transaction) []reps.ReadableTransaction
+	ToReadableTransaction(txn reps.Transaction) reps.ReadableTransaction
 	ToCoinbaseTxn(to string, data string) reps.Transaction
 	SetID(txnRep reps.Transaction) []byte
 }
@@ -71,6 +73,7 @@ func (t *txnAssembler) HashTransactions(txns []reps.Transaction) []byte {
 	return hashedTxns[:]
 }
 
+// Create txn id
 func (t *txnAssembler) SetID(txnRep reps.Transaction) []byte {
 	txnRepInBytes, err := json.Marshal(txnRep)
 	if err != nil {
@@ -110,14 +113,16 @@ func (t *txnAssembler) ToCoinbaseTxn(to string, data string) reps.Transaction {
 	return txnRep
 }
 
-func (a *blockAssembler) ToBlockMap(block reps.Block) map[string]interface{} {
-	data := make(map[string]interface{})
-	data["timestamp"] = block.Timestamp
-	data["prevHash"] = hex.EncodeToString(block.PrevHash)
-	data["hash"] = hex.EncodeToString(block.Hash)
-	data["nounce"] = block.Nounce
+func (b *blockAssembler) ToReadableBlock(block reps.Block) reps.ReadableBlock {
+	var readableBlock reps.ReadableBlock
 
-	var transactions []*reps.ReadableTransaction
+	readableBlock.ID = block.ID
+	readableBlock.Timestamp = block.Timestamp
+	readableBlock.PrevHash = hex.EncodeToString(block.PrevHash)
+	readableBlock.Hash = hex.EncodeToString(block.Hash)
+	readableBlock.Nounce = block.Nounce
+
+	var transactions []reps.ReadableTransaction
 	for _, txn := range block.Transactions {
 
 		var inputs []reps.ReadableTxnInput
@@ -141,7 +146,8 @@ func (a *blockAssembler) ToBlockMap(block reps.Block) map[string]interface{} {
 			outputs = append(outputs, output)
 		}
 
-		transaction := &reps.ReadableTransaction{
+		transaction := reps.ReadableTransaction{
+			BlockID: block.ID,
 			ID:      hex.EncodeToString(txn.ID),
 			Inputs:  inputs,
 			Outputs: outputs,
@@ -150,7 +156,79 @@ func (a *blockAssembler) ToBlockMap(block reps.Block) map[string]interface{} {
 		transactions = append(transactions, transaction)
 	}
 
-	data["transactions"] = transactions
+	readableBlock.Transactions = transactions
 
-	return data
+	return readableBlock
+}
+
+func (t *txnAssembler) ToReadableTransactions(txns []reps.Transaction) []reps.ReadableTransaction {
+	var transactions []reps.ReadableTransaction
+
+	for _, txn := range txns {
+
+		var inputs []reps.ReadableTxnInput
+		for _, in := range txn.Inputs {
+			input := reps.ReadableTxnInput{
+				CurrTxnID: hex.EncodeToString(txn.ID),
+				PrevTxnID: hex.EncodeToString(in.PrevTxnID),
+				OutIdx:    in.OutIdx,
+				ScriptSig: in.ScriptSig,
+			}
+			inputs = append(inputs, input)
+		}
+
+		var outputs []reps.ReadableTxnOutput
+		for _, out := range txn.Outputs {
+			output := reps.ReadableTxnOutput{
+				CurrTxnID:    hex.EncodeToString(txn.ID),
+				Value:        out.Value,
+				ScriptPubKey: out.ScriptPubKey,
+			}
+			outputs = append(outputs, output)
+		}
+
+		transaction := reps.ReadableTransaction{
+			BlockID: txn.BlockID,
+			ID:      hex.EncodeToString(txn.ID),
+			Inputs:  inputs,
+			Outputs: outputs,
+		}
+
+		transactions = append(transactions, transaction)
+	}
+
+	return transactions
+}
+
+func (t *txnAssembler) ToReadableTransaction(txn reps.Transaction) reps.ReadableTransaction {
+	readableTxn := reps.ReadableTransaction{
+		ID: hex.EncodeToString(txn.ID),
+		BlockID: txn.BlockID,
+	}
+
+	var inputs []reps.ReadableTxnInput
+	for _, in := range txn.Inputs {
+		input := reps.ReadableTxnInput{
+			CurrTxnID: hex.EncodeToString(txn.ID),
+			PrevTxnID: hex.EncodeToString(in.PrevTxnID),
+			OutIdx:    in.OutIdx,
+			ScriptSig: in.ScriptSig,
+		}
+		inputs = append(inputs, input)
+	}
+
+	var outputs []reps.ReadableTxnOutput
+	for _, out := range txn.Outputs {
+		output := reps.ReadableTxnOutput{
+			CurrTxnID:    hex.EncodeToString(txn.ID),
+			Value:        out.Value,
+			ScriptPubKey: out.ScriptPubKey,
+		}
+		outputs = append(outputs, output)
+	}
+
+	readableTxn.Inputs = inputs
+	readableTxn.Outputs = outputs
+
+	return readableTxn
 }

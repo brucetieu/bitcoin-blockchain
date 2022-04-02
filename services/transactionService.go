@@ -21,6 +21,9 @@ type TransactionService interface {
 	// SetID(txnRep reps.Transaction) []byte
 	CreateCoinbaseTxn(to string, data string) reps.Transaction
 	CreateTransaction(from string, to string, amount int) (reps.Transaction, error)
+
+	GetTransactions() ([]reps.Transaction, error)
+	GetTransaction(txnId string) (reps.Transaction, error)
 	GetUnspentTransactions(address string) []reps.Transaction
 	GetUnspentTxnOutputs(address string) []reps.TxnOutput
 	GetSpendableOutputs(from string, amount int) (int, map[string][]int)
@@ -28,6 +31,10 @@ type TransactionService interface {
 	CanUnlock(input reps.TxnInput, data string) bool
 	CanBeUnlockedWith(output reps.TxnOutput, data string) bool
 	IsCoinbaseTransaction(txn reps.Transaction) bool
+
+	GetAddresses() (map[string]bool, error)
+	GetBalance(address string) (int, error)
+	GetBalances() ([]reps.AddressBalance, error)
 }
 
 type transactionService struct {
@@ -136,6 +143,88 @@ func (ts *transactionService) CreateTransaction(from string, to string, amount i
 	transaction.ID = txnId
 
 	return transaction, nil
+}
+
+func (tx *transactionService) GetTransaction(txnId string) (reps.Transaction, error) {
+	txnIdByte, err := hex.DecodeString(txnId)
+	if err != nil {
+		log.Error("error decoding string to byte: ", err.Error())
+		// return reps.Transaction{}, err
+	}
+
+	txn, err := tx.blockchainRepo.GetTransaction(txnIdByte)
+	if err != nil {
+		errMsg := fmt.Errorf("%s, id: %s", err.Error(), txnId)
+		return reps.Transaction{}, errMsg
+	}
+
+	return txn, nil
+}
+
+func (ts *transactionService) GetTransactions() ([]reps.Transaction, error) {
+	txns, err := ts.blockchainRepo.GetTransactions()
+	if err != nil {
+		return []reps.Transaction{}, err
+	}
+
+	return txns, nil
+}
+
+func (ts *transactionService) GetAddresses() (map[string]bool, error) {
+	addresses, err := ts.blockchainRepo.GetAddresses()
+	if err != nil {
+		log.Error("error getting addresses: ", err.Error())
+		return addresses, err
+	}
+
+	return addresses, nil
+}
+
+func (ts *transactionService) GetBalance(address string) (int, error) {
+	balance := 0
+
+	addresses, err := ts.GetAddresses()
+	if err != nil {
+		return -1, err
+	}
+
+	if _, exists := addresses[address]; exists {
+		unspentTxnOutputs := ts.GetUnspentTxnOutputs(address)
+		log.Info("unspentTxnOutputs in GetBalance: ", utils.Pretty(unspentTxnOutputs))
+	
+		for _, unspentOutput := range unspentTxnOutputs {
+			balance += unspentOutput.Value
+		}
+	
+	} else {
+		errMsg := fmt.Errorf("could not get balance: address %s was not found", address)
+		return -1, errMsg
+	}
+
+	return balance, nil
+}
+
+func (ts *transactionService) GetBalances() ([]reps.AddressBalance, error) {
+	addresses, err := ts.GetAddresses()
+	if err != nil {
+		return []reps.AddressBalance{}, err
+	}
+
+	balances := make([]reps.AddressBalance, 0)
+
+	for key := range addresses {
+		balance := 0
+		unspentTxnOutputs := ts.GetUnspentTxnOutputs(key)
+		log.Info("unspentTxnOutputs in GetBalance: ", utils.Pretty(unspentTxnOutputs))
+	
+		for _, unspentOutput := range unspentTxnOutputs {
+			balance += unspentOutput.Value
+		}
+
+		balances = append(balances, reps.AddressBalance{key, balance})
+	}
+
+	return balances, nil
 }
 
 // Find out how much of the unspendable outputs from the sender can be spent given an amount

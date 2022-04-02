@@ -23,13 +23,15 @@ func InitRoutes(route *gin.Engine) {
 	groupRoute := route.Group("/")
 	groupRoute.POST("/blockchain", blockchainHandler.CreateBlockchain)
 	groupRoute.GET("/blockchain", blockchainHandler.GetBlockchain)
-	groupRoute.GET("/blockchain/genesis", blockchainHandler.GetGenesisBlock)
-	groupRoute.GET("/blockchain/balance/:address", transactionHandler.GetBalance)
 	groupRoute.POST("/blockchain/block", blockchainHandler.AddToBlockchain)
+	groupRoute.GET("/blockchain/block/genesis", blockchainHandler.GetGenesisBlock)
+	groupRoute.GET("/blockchain/block/last", blockchainHandler.GetLastBlock)
+	groupRoute.GET("/blockchain/block/:blockId", blockchainHandler.GetBlock)
 
-	// groupRoute.GET("/blockchain/balances")
-	// groupRoute.GET("/blockchain/addresses", blockchainHandler.GetAddresses)
-	// groupRoute.GET("/blockchain/transactions")
-	// groupRoute.GET("/blockchain/transactions/:transactionId")
+	groupRoute.GET("/blockchain/balance/:address", transactionHandler.GetBalance)	
+	groupRoute.GET("/blockchain/balances", transactionHandler.GetBalances)
+	groupRoute.GET("/blockchain/addresses", transactionHandler.GetAddresses)
+	groupRoute.GET("/blockchain/transactions", transactionHandler.GetTransactions)
+	groupRoute.GET("/blockchain/transaction/:transactionId", transactionHandler.GetTransaction)
 
 }
