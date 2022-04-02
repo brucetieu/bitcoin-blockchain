@@ -60,7 +60,7 @@ jobs:
     - name: Run testing
       run: go test -v
     
-  # The "deploy" workflow
+ # The "deploy" workflow
   deploy:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
@@ -74,9 +74,9 @@ jobs:
         DOCKER_USER: ${{secrets.DOCKER_USER}}
         DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
       run: |
-        docker login -u $DOCKER_USER -p $DOCKER_PASSWORD 
+        winpty docker login -u $DOCKER_USER -p $DOCKER_PASSWORD 
     - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag $DOCKER_USER/blockchain:$(date +%s)
+      run: winpty docker build . --file Dockerfile --tag $DOCKER_USER/blockchain:$(date +%s)
       
     - name: Docker Push
-      run: docker push $DOCKER_USER/blockchain
+      run: winpty docker push $DOCKER_USER/blockchain
