@@ -47,9 +47,6 @@ jobs:
       run: |
         go vet .
         golint .
-
-    - name: Golang format
-      uses: sladyn98/auto-go-format@master
     
     # Run testing on the code
     - name: Run testing
