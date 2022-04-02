@@ -80,4 +80,4 @@ jobs:
       with:
         context: .
         push: true
-        tags: brucetieu/blockchain:latest
+        # tags: brucetieu/blockchain:latest
