@@ -24,9 +24,8 @@ func (wh *WalletHandler) CreateWallet(c *gin.Context) {
 	if err != nil {
 		log.Error("error creating wallet: ", err.Error())
 		c.JSON(http.StatusInternalServerError, err.Error())
-		return
+	} else {
+		c.JSON(http.StatusOK, gin.H{"address": wallet.Address})
 	}
-
-	c.JSON(http.StatusOK, gin.H{"address": wallet.Address})
 
 }

@@ -5,6 +5,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
+	"fmt"
 
 	"github.com/brucetieu/blockchain/repository"
 	reps "github.com/brucetieu/blockchain/representations"
@@ -46,6 +47,7 @@ func (ws *walletService) CreateKeyPair() (ecdsa.PrivateKey, []byte) {
 	// Public key is a combination of x and y coordinates on elliptic curve
 	pubKey := append(privKey.X.Bytes(), privKey.Y.Bytes()...)
 
+	log.Info(fmt.Sprintf("pubKey: %x\n", pubKey))
 	return *privKey, pubKey
 }
 func (ws *walletService) CreateWallet() (reps.Wallet, error) {
@@ -69,6 +71,7 @@ func (ws *walletService) CreateWallet() (reps.Wallet, error) {
 	return wallet, nil
 }
 
+// pubKeyHash = ripemd160(sha256(pubKey))
 func (ws *walletService) CreatePubKeyHash(pubKey []byte) ([]byte, error) {
 	pubHash := sha256.Sum256(pubKey)
 
@@ -80,13 +83,16 @@ func (ws *walletService) CreatePubKeyHash(pubKey []byte) ([]byte, error) {
 
 	pubKeyHash := ripemdHasher.Sum(nil)
 
+	log.Info(fmt.Sprintf("pubKeyHash: %x\n", pubKeyHash))
 	return pubKeyHash, err
 }
 
+// checksum = sha256(sha256(pubKeyHash))
 func (ws *walletService) CreateChecksum(pubKeyHash []byte) []byte {
 	pubKeyHashSum := sha256.Sum256(pubKeyHash)
 	pubKeyHashSum2 := sha256.Sum256(pubKeyHashSum[:])
 
+	log.Info(fmt.Sprintf("checksum: %x\n", pubKeyHashSum2[:ChecksumLen]))
 	return pubKeyHashSum2[:ChecksumLen] // checksum is first 4 bytes of second hash
 }
 
@@ -98,11 +104,13 @@ func (ws *walletService) CreateAddress(pubKey []byte) ([]byte, error) {
 
 	// Version + pubKeyHash
 	versionedPubKeyHash := append([]byte{Version}, pubKeyHash...)
+	log.Info(fmt.Sprintf("versionedPubKeyHash: %x", versionedPubKeyHash))
 
 	checksum := ws.CreateChecksum(pubKeyHash)
 
 	// version + pubKeyHash + checksum
 	finalHash := append(versionedPubKeyHash, checksum...)
+	log.Info(fmt.Sprintf("finalHash: %x", finalHash))
 
 	address := base58Encode(finalHash)
 
