@@ -23,6 +23,8 @@ type BlockchainRepository interface {
 	CreateTxnInput(txnInput reps.TxnInput) error
 	// GetTxnInputs(txnId []byte) ([]reps.TxnInput, error)
 	// GetTxnOutputs(txnId []byte) ([]reps.TxnOutput, error)
+
+	CreateWallet(wallet reps.Wallet) error
 }
 
 type blockchainRepository struct {
@@ -250,3 +252,11 @@ func (repo *blockchainRepository) GetBlockchain() ([]reps.Block, error) {
 
 	return blocks, nil
 }
+
+func (repo *blockchainRepository) CreateWallet(wallet reps.Wallet) error {
+	if err := db.DB.Create(&wallet).Error; err != nil {
+		return err
+	}
+
+	return nil
+} 
