@@ -16,9 +16,11 @@ func InitRoutes(route *gin.Engine) {
 
 	transactionService := services.NewTransactionService(blockchainRepo)
 	blockchainService := services.NewBlockchainService(blockchainRepo, blockService, transactionService)
+	walletService := services.NewWalletService(blockchainRepo)
 
 	blockchainHandler := handlers.NewBlockchainHandler(blockchainService)
 	transactionHandler := handlers.NewTransactionHandler(transactionService)
+	walletHandler := handlers.NewWalletHandler(walletService)
 
 	groupRoute := route.Group("/")
 
@@ -36,5 +38,7 @@ func InitRoutes(route *gin.Engine) {
 	groupRoute.GET("/blockchain/addresses", transactionHandler.GetAddresses)
 	groupRoute.GET("/blockchain/transactions", transactionHandler.GetTransactions)
 	groupRoute.GET("/blockchain/transaction/:transactionId", transactionHandler.GetTransaction)
+
+	groupRoute.POST("/blockchain/wallet", walletHandler.CreateWallet)
 
 }
