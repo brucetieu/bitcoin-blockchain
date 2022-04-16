@@ -23,10 +23,11 @@ type BlockchainRepository interface {
 	CreateTxnInput(txnInput reps.TxnInput) error
 	// GetTxnInputs(txnId []byte) ([]reps.TxnInput, error)
 	// GetTxnOutputs(txnId []byte) ([]reps.TxnOutput, error)
+
+	CreateWallet(wallet reps.Wallet) error
 }
 
-type blockchainRepository struct {
-}
+type blockchainRepository struct{}
 
 func NewBlockchainRepository() BlockchainRepository {
 	return &blockchainRepository{}
@@ -124,7 +125,6 @@ func (repo *blockchainRepository) GetTransactions() ([]reps.Transaction, error) 
 		Preload("Outputs").
 		Find(&transactions).
 		Error
-
 	if err != nil {
 		return []reps.Transaction{}, err
 	}
@@ -158,7 +158,6 @@ func (repo *blockchainRepository) GetTransactionsByBlockId(blockId string) ([]re
 		Preload("Outputs").
 		Find(&transactions).
 		Error
-
 	if err != nil {
 		return []reps.Transaction{}, err
 	}
@@ -173,7 +172,6 @@ func (repo *blockchainRepository) GetTxnInputs(txnId []byte) ([]reps.TxnInput, e
 	err := db.DB.Where("curr_txn_id = ?", txnId).
 		Find(&txnInputs).
 		Error
-
 	if err != nil {
 		return []reps.TxnInput{}, err
 	}
@@ -188,7 +186,6 @@ func (repo *blockchainRepository) GetTxnOutputs(txnId []byte) ([]reps.TxnOutput,
 	err := db.DB.Where("curr_txn_id = ?", txnId).
 		Find(&txnOutputs).
 		Error
-
 	if err != nil {
 		return []reps.TxnOutput{}, err
 	}
@@ -215,7 +212,6 @@ func (repo *blockchainRepository) GetGenesisBlock() (reps.Block, error) {
 	genesisBlock.Transactions = txns
 
 	return genesisBlock, nil
-
 }
 
 // Save block to db
@@ -249,4 +245,12 @@ func (repo *blockchainRepository) GetBlockchain() ([]reps.Block, error) {
 	}
 
 	return blocks, nil
+}
+
+func (repo *blockchainRepository) CreateWallet(wallet reps.Wallet) error {
+	if err := db.DB.Create(&wallet).Error; err != nil {
+		return err
+	}
+
+	return nil
 }
