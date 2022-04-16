@@ -1,13 +1,13 @@
 package representations
 
 import (
-	// "crypto/ecdsa"
+// "crypto/ecdsa"
 )
 
 type Wallet struct {
 	// PrivateKey ecdsa.PrivateKey
-	ID string `json:"id" gorm:"primary_key"`
-	Address string
+	ID         string `json:"id" gorm:"primary_key"`
+	Address    string
 	PrivateKey []byte
-	PublicKey []byte
+	PublicKey  []byte
 }
