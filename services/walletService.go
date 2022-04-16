@@ -20,12 +20,13 @@ import (
 
 var (
 	ChecksumLen = 4
-	Version = byte(0)
+	Version     = byte(0)
 )
+
 type WalletService interface {
 	CreateWallet() (reps.Wallet, error)
 	CreateKeyPair() (ecdsa.PrivateKey, []byte)
-	CreatePubKeyHash(pubKey []byte) ([]byte , error)
+	CreatePubKeyHash(pubKey []byte) ([]byte, error)
 	CreateChecksum(pubKeyHash []byte) []byte
 	CreateAddress(pubKey []byte) ([]byte, error)
 }
@@ -50,6 +51,7 @@ func (ws *walletService) CreateKeyPair() (ecdsa.PrivateKey, []byte) {
 	log.Info(fmt.Sprintf("pubKey: %x\n", pubKey))
 	return *privKey, pubKey
 }
+
 func (ws *walletService) CreateWallet() (reps.Wallet, error) {
 	privKey, pubKey := ws.CreateKeyPair()
 

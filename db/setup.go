@@ -18,7 +18,6 @@ func ConnectDatabase() {
 	// dbURL := "postgres://postgres:pass@localhost:5432/blockchain"
 
 	database, err := gorm.Open(postgres.Open(dbURL), &gorm.Config{})
-
 	if err != nil {
 		panic("Failed to connect to database!")
 	}

@@ -27,5 +27,4 @@ func (wh *WalletHandler) CreateWallet(c *gin.Context) {
 	} else {
 		c.JSON(http.StatusOK, gin.H{"address": wallet.Address})
 	}
-
 }
