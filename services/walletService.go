@@ -1,6 +1,7 @@
 package services
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -9,7 +10,7 @@ import (
 
 	"github.com/brucetieu/blockchain/repository"
 	reps "github.com/brucetieu/blockchain/representations"
-	"github.com/sirupsen/logrus"
+	"github.com/brucetieu/blockchain/utils"
 	"golang.org/x/crypto/ripemd160"
 
 	"github.com/akamensky/base58"
@@ -25,19 +26,24 @@ var (
 
 type WalletService interface {
 	CreateWallet() (reps.Wallet, error)
+	GetWallet(address string) (reps.Wallet, error)
+	// GetWallets() ([]reps.WalletGorm, error)
 	CreateKeyPair() (ecdsa.PrivateKey, []byte)
 	CreatePubKeyHash(pubKey []byte) ([]byte, error)
 	CreateChecksum(pubKeyHash []byte) []byte
 	CreateAddress(pubKey []byte) ([]byte, error)
+	ValidateAddress(address string) (bool, error)
 }
 
 type walletService struct {
 	blockchainRepo repository.BlockchainRepository
+	walletAssember   WalletAssemblerFac
 }
 
 func NewWalletService(blockchainRepo repository.BlockchainRepository) WalletService {
 	return &walletService{
 		blockchainRepo: blockchainRepo,
+		walletAssember: WalletAssembler,
 	}
 }
 
@@ -52,6 +58,16 @@ func (ws *walletService) CreateKeyPair() (ecdsa.PrivateKey, []byte) {
 	return *privKey, pubKey
 }
 
+func (ws *walletService) GetWallet(address string) (reps.Wallet, error) {
+	walletGorm, err := ws.blockchainRepo.GetWallet(address)
+	if err != nil {
+		return reps.Wallet{}, err
+	}
+
+	utils.PrettyPrintln("walletGorm in ws.GetWallet: ", walletGorm)
+	return ws.walletAssember.ToWallet(&walletGorm), nil
+}	
+
 func (ws *walletService) CreateWallet() (reps.Wallet, error) {
 	privKey, pubKey := ws.CreateKeyPair()
 
@@ -62,10 +78,11 @@ func (ws *walletService) CreateWallet() (reps.Wallet, error) {
 
 	log.Info("wallet address: ", string(walletAddress))
 
-	wallet := reps.Wallet{uuid.Must(uuid.NewRandom()).String(), string(walletAddress), privKey.D.Bytes(), pubKey}
+	wallet := reps.Wallet{uuid.Must(uuid.NewRandom()).String(), string(walletAddress), privKey, pubKey}
 
+	utils.PrettyPrintln("wallet: ", wallet)
 	// Persist
-	err = ws.blockchainRepo.CreateWallet(wallet)
+	err = ws.blockchainRepo.CreateWallet(ws.walletAssember.ToGormWallet(&wallet))
 	if err != nil {
 		return reps.Wallet{}, err
 	}
@@ -80,7 +97,7 @@ func (ws *walletService) CreatePubKeyHash(pubKey []byte) ([]byte, error) {
 	ripemdHasher := ripemd160.New()
 	_, err := ripemdHasher.Write(pubHash[:])
 	if err != nil {
-		logrus.Error(err.Error())
+		log.Error(err.Error())
 	}
 
 	pubKeyHash := ripemdHasher.Sum(nil)
@@ -117,6 +134,32 @@ func (ws *walletService) CreateAddress(pubKey []byte) ([]byte, error) {
 	address := base58Encode(finalHash)
 
 	return address, nil
+}
+
+func (ws *walletService) ValidateAddress(address string) (bool, error) {
+	// query address from db first
+	_, err := ws.GetWallet(address)
+	if err != nil {
+		errMsg := fmt.Errorf("%s: wallet with address %s does not exist", err.Error(), address)
+		return false, errMsg
+	}
+
+	pubKeyHash := base58Decode([]byte(address))
+	actualChecksum := pubKeyHash[len(pubKeyHash)-ChecksumLen:]
+	pubKeyHash = pubKeyHash[1:len(pubKeyHash)-ChecksumLen]
+	expectedChecksum := ws.CreateChecksum(pubKeyHash)
+
+	if bytes.Compare(actualChecksum, expectedChecksum) == 0 {
+		return true, nil
+	}
+
+	return false, nil
+	// return bytes.Compare(actualChecksum, expectedChecksum) == 0
+}
+
+func base58Decode(address []byte) []byte {
+	base58Decoded, _ := base58.Decode(string(address))
+	return base58Decoded
 }
 
 func base58Encode(hash []byte) []byte {

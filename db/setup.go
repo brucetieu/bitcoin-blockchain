@@ -14,8 +14,8 @@ var DB *gorm.DB
 
 func ConnectDatabase() {
 	// Connect to running postgres container. database is the container name
-	dbURL := "postgres://postgres:pass@database:5432/blockchain"
-	// dbURL := "postgres://postgres:pass@localhost:5432/blockchain"
+	// dbURL := "postgres://postgres:pass@database:5432/blockchain"
+	dbURL := "postgres://postgres:pass@localhost:5432/blockchain"
 
 	database, err := gorm.Open(postgres.Open(dbURL), &gorm.Config{})
 	if err != nil {
@@ -28,7 +28,7 @@ func ConnectDatabase() {
 	database.AutoMigrate(&reps.Transaction{})
 	database.AutoMigrate(&reps.TxnInput{})
 	database.AutoMigrate(&reps.TxnOutput{})
-	database.AutoMigrate(&reps.Wallet{})
+	database.AutoMigrate(&reps.WalletGorm{})
 
 	DB = database
 }

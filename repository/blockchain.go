@@ -11,7 +11,8 @@ type BlockchainRepository interface {
 	GetTransactionsByBlockId(blockId string) ([]reps.Transaction, error)
 	GetTransactions() ([]reps.Transaction, error)
 	GetTransaction(txnId []byte) (reps.Transaction, error)
-	GetAddresses() (map[string]bool, error)
+	// GetAddresses() (map[string]bool, error)
+	GetAddresses() ([]reps.WalletGorm, error)
 
 	CreateBlock(block reps.Block) error
 	GetGenesisBlock() (reps.Block, error)
@@ -24,7 +25,9 @@ type BlockchainRepository interface {
 	// GetTxnInputs(txnId []byte) ([]reps.TxnInput, error)
 	// GetTxnOutputs(txnId []byte) ([]reps.TxnOutput, error)
 
-	CreateWallet(wallet reps.Wallet) error
+	CreateWallet(wallet reps.WalletGorm) error
+	GetWallet(address string) (reps.WalletGorm, error)
+	GetWallets() ([]reps.WalletGorm, error)
 }
 
 type blockchainRepository struct{}
@@ -55,21 +58,27 @@ func (repo *blockchainRepository) CreateTransaction(txn []reps.Transaction) erro
 }
 
 // Get all distinct addresses
-func (repo *blockchainRepository) GetAddresses() (map[string]bool, error) {
-	addresses := make(map[string]bool)
-	var address string
+func (repo *blockchainRepository) GetAddresses() ([]reps.WalletGorm, error) {
+	var wallets []reps.WalletGorm
 
-	rows, err := db.DB.Raw("SELECT DISTINCT script_pub_key FROM txn_outputs").Rows()
-	if err != nil {
-		return addresses, err
+	if err := db.DB.
+		Find(&wallets).Error; err != nil {
+		return []reps.WalletGorm{}, nil
 	}
-	defer rows.Close()
-	for rows.Next() {
-		rows.Scan(&address)
-		addresses[address] = true
-	}
+	// addresses := make(map[string]bool)
+	// var address string
 
-	return addresses, nil
+	// rows, err := db.DB.Raw("SELECT DISTINCT address FROM txn_outputs").Rows()
+	// if err != nil {
+	// 	return addresses, err
+	// }
+	// defer rows.Close()
+	// for rows.Next() {
+	// 	rows.Scan(&address)
+	// 	addresses[address] = true
+	// }
+
+	return wallets, nil
 }
 
 // Get the last block in the blockchain
@@ -247,10 +256,37 @@ func (repo *blockchainRepository) GetBlockchain() ([]reps.Block, error) {
 	return blocks, nil
 }
 
-func (repo *blockchainRepository) CreateWallet(wallet reps.Wallet) error {
+func (repo *blockchainRepository) CreateWallet(wallet reps.WalletGorm) error {
 	if err := db.DB.Create(&wallet).Error; err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (repo *blockchainRepository) GetWallet(address string) (reps.WalletGorm, error) {
+	var wallet reps.WalletGorm
+
+	err := db.DB.
+			Where("address = ?", address).
+			First(&wallet).
+			Error
+	if err != nil {
+		return reps.WalletGorm{}, err
+	}
+	
+	return wallet, nil
+}
+
+func (repo *blockchainRepository) GetWallets() ([]reps.WalletGorm, error) {
+	var wallets []reps.WalletGorm
+
+	err := db.DB.
+			Find(&wallets).
+			Error
+	if err != nil {
+		return []reps.WalletGorm{}, err
+	}
+
+	return wallets, nil
 }

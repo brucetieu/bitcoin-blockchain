@@ -14,7 +14,7 @@ import (
 
 type BlockchainService interface {
 	AddToBlockChain(from string, to string, amount int) (reps.Block, error)
-	CreateBlockchain(to string) (reps.Block, bool, error)
+	CreateBlockchain(address string) (reps.Block, bool, error)
 	GetBlockchain() ([]reps.Block, error)
 	GetGenesisBlock() (reps.Block, error)
 	GetBlock(blockId string) (reps.Block, error)
@@ -25,25 +25,44 @@ type blockchainService struct {
 	blockchainRepo     repository.BlockchainRepository
 	blockService       BlockService
 	transactionService TransactionService
+	walletService WalletService
 	blockAssembler     BlockAssemblerFac
 }
 
 func NewBlockchainService(blockchainRepo repository.BlockchainRepository,
-	blockService BlockService, transactionService TransactionService) BlockchainService {
+	blockService BlockService, transactionService TransactionService, walletService WalletService) BlockchainService {
 	return &blockchainService{
 		blockchainRepo:     blockchainRepo,
 		blockService:       blockService,
 		transactionService: transactionService,
+		walletService: walletService,
 		blockAssembler:     BlockAssembler,
 	}
 }
 
-func (bc *blockchainService) CreateBlockchain(to string) (reps.Block, bool, error) {
+// address is wallet address
+func (bc *blockchainService) CreateBlockchain(address string) (reps.Block, bool, error) {
+	// validate address
+	addressValid, err := bc.walletService.ValidateAddress(address)
+	if err != nil {
+		log.Error(err.Error())
+		return reps.Block{}, false, err
+	}
+
+	if !addressValid {
+		log.Errorf("error: address of %s is not valid", address)
+		return reps.Block{}, false, fmt.Errorf("error: address of %s is not valid", address)
+	}
+	// if !bc.walletService.ValidateAddress(address) {
+	// 	log.Errorf("error: address of %s is not valid", address)
+	// 	return reps.Block{}, false, fmt.Errorf("error: address of %s is not valid", address)
+	// }
+
 	// Try to get genesis block
 	genesis, err := bc.GetGenesisBlock()
 	if err != nil {
 		log.Info("Genesis doesn't exist, so creating it now...")
-		coinbaseTxn := bc.transactionService.CreateCoinbaseTxn(to, "First transaction in Blockchain")
+		coinbaseTxn := bc.transactionService.CreateCoinbaseTxn(address, "First transaction in Blockchain")
 		newBlock, err := bc.blockService.CreateBlock([]reps.Transaction{coinbaseTxn}, []byte{})
 
 		// Persist
@@ -60,6 +79,27 @@ func (bc *blockchainService) CreateBlockchain(to string) (reps.Block, bool, erro
 }
 
 func (bc *blockchainService) AddToBlockChain(from string, to string, amount int) (reps.Block, error) {
+	// Validate from and to are valid addresses
+	addressValid, err := bc.walletService.ValidateAddress(from)
+	if err != nil {
+		log.Error(err.Error())
+		return reps.Block{}, err
+	}
+	if !addressValid {
+		log.Errorf("error: address of %s is not valid", from)
+		return reps.Block{}, fmt.Errorf("error: address of %s is not valid", from)
+	}
+
+	addressValid, err = bc.walletService.ValidateAddress(to)
+	if err != nil {
+		log.Error(err.Error())
+		return reps.Block{}, err
+	}
+	if !addressValid {
+		log.Errorf("error: address of %s is not valid", to)
+		return reps.Block{}, fmt.Errorf("error: address of %s is not valid", to)
+	}
+
 	// Check if there is at least a genesis block in the blockchain
 	lastBlock, err := bc.blockchainRepo.GetLastBlock()
 	if err != nil {
@@ -67,10 +107,19 @@ func (bc *blockchainService) AddToBlockChain(from string, to string, amount int)
 		return reps.Block{}, errMsg
 	}
 
-	// Create a new transaction
+	// Create a new transaction. 
 	newTxn, err := bc.transactionService.CreateTransaction(from, to, amount)
 	if err != nil {
 		return reps.Block{}, err
+	}
+
+	// Verify the signatures on transaction inputs
+	txns := []reps.Transaction{newTxn}
+	for _, txn := range txns {
+		if !bc.transactionService.VerifyTransaction(txn) {
+			log.WithField("error", err.Error()).Error("error: invalid transaction")
+			return reps.Block{}, err
+		}
 	}
 
 	// Create a new block with new transaction and persist

@@ -5,6 +5,7 @@ import (
 
 	reps "github.com/brucetieu/blockchain/representations"
 	"github.com/brucetieu/blockchain/services"
+	"github.com/brucetieu/blockchain/utils"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
@@ -59,6 +60,8 @@ func (bch *BlockchainHandler) AddToBlockchain(c *gin.Context) {
 		return
 	}
 
+	log.Info("Adding Block to blockchain: ", utils.Pretty(input))
+
 	// Create block and persist to db
 	newBlock, err := bch.blockchainService.AddToBlockChain(input.From, input.To, input.Amount)
 	if err != nil {
@@ -75,6 +78,7 @@ func (bch *BlockchainHandler) AddToBlockchain(c *gin.Context) {
 
 // Print out all blocks in blockchain
 func (bch *BlockchainHandler) GetBlockchain(c *gin.Context) {
+	log.Info("Printing out the Blockchain")
 	blockchain, err := bch.blockchainService.GetBlockchain()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -93,6 +97,7 @@ func (bch *BlockchainHandler) GetBlockchain(c *gin.Context) {
 
 // Get the first block in block chain
 func (bch *BlockchainHandler) GetGenesisBlock(c *gin.Context) {
+	log.Info("Getting Genesis block")
 	genesis, err := bch.blockchainService.GetGenesisBlock()
 	if err != nil {
 		log.WithField("error", err.Error()).Error("Error getting genesis block")

@@ -2,24 +2,29 @@ package services
 
 import (
 	"bytes"
+	"crypto/elliptic"
 	"crypto/sha256"
+	"encoding/gob"
 	"encoding/hex"
 	"encoding/json"
 
 	// "fmt"
 
 	reps "github.com/brucetieu/blockchain/representations"
-	"github.com/google/uuid"
+
+	// "github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 )
 
 var (
 	BlockAssembler BlockAssemblerFac
 	TxnAssembler   TxnAssemblerFac
+	WalletAssembler WalletAssemblerFac
 )
 
 type blockAssembler struct{}
 type txnAssembler struct{}
+type walletAssembler struct{}
 
 func NewBlockAssemblerFac() BlockAssemblerFac {
 	return &blockAssembler{}
@@ -37,10 +42,21 @@ func NewTxnAssemblerFac() TxnAssemblerFac {
 
 type TxnAssemblerFac interface {
 	HashTransactions(txns []reps.Transaction) []byte
+	HashTransaction(txn reps.Transaction) []byte
 	ToReadableTransactions(txns []reps.Transaction) []reps.ReadableTransaction
 	ToReadableTransaction(txn reps.Transaction) reps.ReadableTransaction
-	ToCoinbaseTxn(to string, data string) reps.Transaction
+	ToTxnBytes(txn reps.Transaction) []byte
+	// ToCoinbaseTxn(to string, data string) reps.Transaction
 	SetID(txnRep reps.Transaction) []byte
+}
+
+func NewWalletAssemblerFac() WalletAssemblerFac {
+	return &walletAssembler{}
+}
+
+type WalletAssemblerFac interface {
+	ToGormWallet(wallet *reps.Wallet) reps.WalletGorm
+	ToWallet(walletGorm *reps.WalletGorm) reps.Wallet
 }
 
 func (b *blockAssembler) ToBlockBytes(block *reps.Block) []byte {
@@ -59,6 +75,26 @@ func (b *blockAssembler) ToBlockStructure(data []byte) *reps.Block {
 		log.Error("Unable to unmarshal: ", err.Error())
 	}
 	return &block
+}
+
+func (t *txnAssembler) ToTxnBytes(txn reps.Transaction) []byte {
+	txnBytes, err := json.Marshal(txn)
+	if err != nil {
+		log.Error("Unable to marshal", err.Error())
+	}
+
+	return txnBytes
+}
+
+func (t *txnAssembler) HashTransaction(txn reps.Transaction) []byte {
+	var hash [32]byte
+
+	txnCopy := &txn
+	txnCopy.ID = nil
+
+	hash = sha256.Sum256(t.ToTxnBytes(*txnCopy))
+
+	return hash[:]
 }
 
 // Hash all transaction ids
@@ -83,35 +119,35 @@ func (t *txnAssembler) SetID(txnRep reps.Transaction) []byte {
 	return hashID[:]
 }
 
-func (t *txnAssembler) ToCoinbaseTxn(to string, data string) reps.Transaction {
-	var txnOut reps.TxnOutput
-	var txnIn reps.TxnInput
-	var txnRep reps.Transaction
+// func (t *txnAssembler) ToCoinbaseTxn(to string, data string) reps.Transaction {
+// 	var txnOut reps.TxnOutput
+// 	var txnIn reps.TxnInput
+// 	var txnRep reps.Transaction
 
-	txnInputId := uuid.Must(uuid.NewRandom()).String()
-	txnOutputId := uuid.Must(uuid.NewRandom()).String()
+// 	txnInputId := uuid.Must(uuid.NewRandom()).String()
+// 	txnOutputId := uuid.Must(uuid.NewRandom()).String()
 
-	txnOut.OutputID = txnOutputId
-	txnOut.Value = Reward
-	txnOut.ScriptPubKey = to
+// 	txnOut.OutputID = txnOutputId
+// 	txnOut.Value = Reward
+// 	txnOut.PubKeyHash = to
 
-	txnIn.InputID = txnInputId
-	txnIn.PrevTxnID = []byte{}
-	txnIn.OutIdx = -1
-	txnIn.ScriptSig = data
+// 	txnIn.InputID = txnInputId
+// 	txnIn.PrevTxnID = []byte{}
+// 	txnIn.OutIdx = -1
+// 	txnIn.ScriptSig = data
 
-	txnRep.Outputs = []reps.TxnOutput{txnOut}
-	txnRep.Inputs = []reps.TxnInput{txnIn}
+// 	txnRep.Outputs = []reps.TxnOutput{txnOut}
+// 	txnRep.Inputs = []reps.TxnInput{txnIn}
 
-	// Put this here to ensure we get a different hash each time
-	currTxnID := t.SetID(txnRep)
+// 	// Put this here to ensure we get a different hash each time
+// 	currTxnID := t.SetID(txnRep)
 
-	txnRep.ID = currTxnID
-	txnOut.CurrTxnID = currTxnID
-	txnIn.CurrTxnID = currTxnID
+// 	txnRep.ID = currTxnID
+// 	txnOut.CurrTxnID = currTxnID
+// 	txnIn.CurrTxnID = currTxnID
 
-	return txnRep
-}
+// 	return txnRep
+// }
 
 func (b *blockAssembler) ToReadableBlock(block reps.Block) reps.ReadableBlock {
 	var readableBlock reps.ReadableBlock
@@ -131,7 +167,8 @@ func (b *blockAssembler) ToReadableBlock(block reps.Block) reps.ReadableBlock {
 				CurrTxnID: hex.EncodeToString(txn.ID),
 				PrevTxnID: hex.EncodeToString(in.PrevTxnID),
 				OutIdx:    in.OutIdx,
-				ScriptSig: in.ScriptSig,
+				PubKey: hex.EncodeToString(in.PubKey),
+				Signature: hex.EncodeToString(in.Signature),
 			}
 			inputs = append(inputs, input)
 		}
@@ -141,7 +178,7 @@ func (b *blockAssembler) ToReadableBlock(block reps.Block) reps.ReadableBlock {
 			output := reps.ReadableTxnOutput{
 				CurrTxnID:    hex.EncodeToString(txn.ID),
 				Value:        out.Value,
-				ScriptPubKey: out.ScriptPubKey,
+				PubKeyHash: hex.EncodeToString(out.PubKeyHash),
 			}
 			outputs = append(outputs, output)
 		}
@@ -171,8 +208,8 @@ func (t *txnAssembler) ToReadableTransactions(txns []reps.Transaction) []reps.Re
 			input := reps.ReadableTxnInput{
 				CurrTxnID: hex.EncodeToString(txn.ID),
 				PrevTxnID: hex.EncodeToString(in.PrevTxnID),
-				OutIdx:    in.OutIdx,
-				ScriptSig: in.ScriptSig,
+				PubKey: hex.EncodeToString(in.PubKey),
+				Signature: hex.EncodeToString(in.Signature),
 			}
 			inputs = append(inputs, input)
 		}
@@ -182,7 +219,7 @@ func (t *txnAssembler) ToReadableTransactions(txns []reps.Transaction) []reps.Re
 			output := reps.ReadableTxnOutput{
 				CurrTxnID:    hex.EncodeToString(txn.ID),
 				Value:        out.Value,
-				ScriptPubKey: out.ScriptPubKey,
+				PubKeyHash: hex.EncodeToString(out.PubKeyHash),
 			}
 			outputs = append(outputs, output)
 		}
@@ -212,7 +249,8 @@ func (t *txnAssembler) ToReadableTransaction(txn reps.Transaction) reps.Readable
 			CurrTxnID: hex.EncodeToString(txn.ID),
 			PrevTxnID: hex.EncodeToString(in.PrevTxnID),
 			OutIdx:    in.OutIdx,
-			ScriptSig: in.ScriptSig,
+			PubKey: hex.EncodeToString(in.PubKey),
+			Signature: hex.EncodeToString(in.Signature),
 		}
 		inputs = append(inputs, input)
 	}
@@ -222,7 +260,7 @@ func (t *txnAssembler) ToReadableTransaction(txn reps.Transaction) reps.Readable
 		output := reps.ReadableTxnOutput{
 			CurrTxnID:    hex.EncodeToString(txn.ID),
 			Value:        out.Value,
-			ScriptPubKey: out.ScriptPubKey,
+			PubKeyHash: hex.EncodeToString(out.PubKeyHash),
 		}
 		outputs = append(outputs, output)
 	}
@@ -231,4 +269,38 @@ func (t *txnAssembler) ToReadableTransaction(txn reps.Transaction) reps.Readable
 	readableTxn.Outputs = outputs
 
 	return readableTxn
+}
+
+func (w *walletAssembler) ToGormWallet(wallet *reps.Wallet) reps.WalletGorm {
+	gob.Register(elliptic.P256())
+	var content bytes.Buffer
+
+	walletGorm := reps.WalletGorm {
+		ID: wallet.ID,
+		Address: wallet.Address,
+	}
+
+	encoder := gob.NewEncoder(&content)
+	err := encoder.Encode(wallet)
+	if err != nil {
+		log.Error("unable to encode", err.Error())
+	}
+
+	walletGorm.WalletByte = content.Bytes()
+
+	return walletGorm
+}
+
+func (w *walletAssembler) ToWallet(walletGorm *reps.WalletGorm) reps.Wallet {
+	var wallet reps.Wallet
+	gob.Register(elliptic.P256())
+
+	buf := bytes.NewBuffer(walletGorm.WalletByte)
+	decoder := gob.NewDecoder(buf)
+	err := decoder.Decode(&wallet)
+	if err != nil {
+		log.Error("Unable to decode: ", err.Error())
+	}
+
+	return wallet
 }

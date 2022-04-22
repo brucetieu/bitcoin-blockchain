@@ -23,13 +23,14 @@ type ReadableTxnInput struct {
 	CurrTxnID string `json:"currTxnId"`
 	PrevTxnID string `json:"prevTxnId"`
 	OutIdx    int    `json:"outIdx"`
-	ScriptSig string `json:"scriptSig"`
+	PubKey string    `json:"pubKey"`
+	Signature string `json:"signature"`
 }
 
 type ReadableTxnOutput struct {
 	CurrTxnID    string `json:"currTxnId"`
 	Value        int    `json:"value"`
-	ScriptPubKey string `json:"scriptPubKey"`
+	PubKeyHash string `json:"pubKeyHash"`
 }
 
 // InputID -> unique id of the TxnInput
@@ -43,7 +44,9 @@ type TxnInput struct {
 	CurrTxnID []byte `json:"currTxnId" gorm:"column:curr_txn_id"`
 	PrevTxnID []byte `json:"prevTxnId" gorm:"column:prev_txn_id"`
 	OutIdx    int    `json:"outIdx"`
-	ScriptSig string `json:"scriptSig"`
+	// ScriptSig string `json:"scriptSig"`
+	Signature []byte `json:"signature"`// signature of the entire transaction
+	PubKey []byte `json:"pubKey"` // not hashed
 }
 
 // OutputID -> Unique id representing the output
@@ -55,5 +58,6 @@ type TxnOutput struct {
 
 	CurrTxnID    []byte `json:"currTxnId" gorm:"column:curr_txn_id"`
 	Value        int    `json:"value"`
-	ScriptPubKey string `json:"scriptPubKey"`
+	PubKeyHash   []byte `json:"pubKeyHash"`// locks the output
+	// ScriptPubKey string `json:"scriptPubKey"`
 }
