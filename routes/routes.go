@@ -25,24 +25,27 @@ func InitRoutes(route *gin.Engine) {
 
 	groupRoute := route.Group("/")
 
+	// Health check
 	groupRoute.GET("/", blockchainHandler.BlockchainHome)
 
+	// Blockchain handlers
 	groupRoute.POST("/blockchain", blockchainHandler.CreateBlockchain)
 	groupRoute.GET("/blockchain", blockchainHandler.GetBlockchain)
+
+	// Block handlers
 	groupRoute.POST("/blockchain/block", blockchainHandler.AddToBlockchain)
 	groupRoute.GET("/blockchain/block/genesis", blockchainHandler.GetGenesisBlock)
 	groupRoute.GET("/blockchain/block/last", blockchainHandler.GetLastBlock)
 	groupRoute.GET("/blockchain/block/:blockId", blockchainHandler.GetBlock)
 
-	// groupRoute.GET("/blockchain/balance/:address", transactionHandler.GetBalance)
-	// groupRoute.GET("/blockchain/balances", transactionHandler.GetBalances)
-	// groupRoute.GET("/blockchain/addresses", transactionHandler.GetAddresses)
+	// Transaction handlers
 	groupRoute.GET("/blockchain/transactions", transactionHandler.GetTransactions)
 	groupRoute.GET("/blockchain/transactions/:transactionId", transactionHandler.GetTransaction)
 
+	// Wallet handlers
 	groupRoute.POST("/blockchain/wallets", walletHandler.CreateWallet)
-	// groupRoute.GET("/blockchain/wallets/addresses", transactionHandler.GetAddresses)
-	groupRoute.GET("/blockchain/wallets", transactionHandler.GetWallets)
-	groupRoute.GET("/blockchain/wallets/:address", transactionHandler.GetWallet)
-	// groupRoute.GET("/blockchain/wallets/:address/balance", transactionHandler.GetAddresses)
+	groupRoute.GET("/blockchain/wallets", walletHandler.GetWallets)
+	groupRoute.GET("/blockchain/wallets/balances", transactionHandler.GetBalances)
+	groupRoute.GET("/blockchain/wallets/:address", walletHandler.GetWallet)
+	groupRoute.GET("/blockchain/wallets/:address/balance", transactionHandler.GetBalance)
 }

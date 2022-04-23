@@ -1,22 +1,15 @@
 package representations
 
-import (
-"crypto/ecdsa"
-)
-
 type Wallet struct {
-	ID         string `json:"id" gorm:"primary_key"`
-	Address    string  `json:"address"`
-	PrivateKey ecdsa.PrivateKey `json:"privateKey"`
-	PublicKey  []byte`json:"publicKey"`
+	ID         string `json:"id,omitempty" gorm:"primary_key"`
+	Address    string  `json:"address,omitempty"`
+	PrivateKey []byte `json:"privateKey,omitempty"`
+	PublicKey  string`json:"publicKey,omitempty"`
 }
 
-// This type of wallet can be saved to gormdb
-// WalletByte is the contents of the wallet serialized (privateKey, publicKey)
-type WalletGorm struct {
-	ID         string `json:"id" gorm:"primary_key"`
-	Address string `json:"address"`
-	Balance int `json:"balance,omitempty"`
-	WalletByte []byte `json:"walletByte,omitempty"`// The entire contents of Wallet in byte form
+// This represents balance information for a wallet (address)
+type AddressBalance struct {
+	Address string `json:"address,omitempty"`
+	PublicKey string `json:"publicKey,omitempty"`
+	Balance int `json:"balance"`
 }
-

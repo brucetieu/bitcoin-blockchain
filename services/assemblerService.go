@@ -2,6 +2,7 @@ package services
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/sha256"
 	"encoding/gob"
@@ -55,8 +56,8 @@ func NewWalletAssemblerFac() WalletAssemblerFac {
 }
 
 type WalletAssemblerFac interface {
-	ToGormWallet(wallet *reps.Wallet) reps.WalletGorm
-	ToWallet(walletGorm *reps.WalletGorm) reps.Wallet
+	ToPrivateKeyBytes(privateKey ecdsa.PrivateKey) []byte
+	ToECDSAPrivateKey(privateKey []byte) ecdsa.PrivateKey
 }
 
 func (b *blockAssembler) ToBlockBytes(block *reps.Block) []byte {
@@ -271,36 +272,32 @@ func (t *txnAssembler) ToReadableTransaction(txn reps.Transaction) reps.Readable
 	return readableTxn
 }
 
-func (w *walletAssembler) ToGormWallet(wallet *reps.Wallet) reps.WalletGorm {
+// Convert ecdsa.PrivateKey to slice of bytes
+func (w *walletAssembler) ToPrivateKeyBytes(privateKey ecdsa.PrivateKey) []byte {
 	gob.Register(elliptic.P256())
 	var content bytes.Buffer
 
-	walletGorm := reps.WalletGorm {
-		ID: wallet.ID,
-		Address: wallet.Address,
-	}
-
 	encoder := gob.NewEncoder(&content)
-	err := encoder.Encode(wallet)
+	err := encoder.Encode(privateKey)
 	if err != nil {
 		log.Error("unable to encode", err.Error())
 	}
 
-	walletGorm.WalletByte = content.Bytes()
-
-	return walletGorm
+	return content.Bytes()
 }
 
-func (w *walletAssembler) ToWallet(walletGorm *reps.WalletGorm) reps.Wallet {
-	var wallet reps.Wallet
+// Convert byte representation of the private key to a ecdsa.PrivateKey
+func (w *walletAssembler) ToECDSAPrivateKey(privKeyBytes []byte) ecdsa.PrivateKey {
+	var privKey ecdsa.PrivateKey
 	gob.Register(elliptic.P256())
 
-	buf := bytes.NewBuffer(walletGorm.WalletByte)
+	buf := bytes.NewBuffer(privKeyBytes)
 	decoder := gob.NewDecoder(buf)
-	err := decoder.Decode(&wallet)
+	err := decoder.Decode(&privKey)
 	if err != nil {
 		log.Error("Unable to decode: ", err.Error())
 	}
 
-	return wallet
+	return privKey
+
 }

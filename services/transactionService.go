@@ -24,7 +24,7 @@ import (
 	// "github.com/google/uuid"
 )
 
-var Reward = 500
+var Reward = 500  // Initial reward miner gets for mining the first block
 
 type TransactionService interface {
 	NewTxnOutput(value int, address string) reps.TxnOutput
@@ -44,14 +44,11 @@ type TransactionService interface {
 	// CanBeUnlockedWith(output reps.TxnOutput, data string) bool
 	IsCoinbaseTransaction(txn reps.Transaction) bool
 
-	VerifyTransaction(txn reps.Transaction) bool
-	VerifySignature(currTxn reps.Transaction, prevTxns map[string]reps.Transaction) bool
+	VerifyTransaction(txn reps.Transaction) (bool, error)
+	VerifySignature(currTxn reps.Transaction, prevTxns map[string]reps.Transaction) (bool, error)
 
-	// GetAddresses() (map[string]bool, error)
-	GetWallets() ([]reps.WalletGorm, error)
-	GetWallet(address string) (reps.WalletGorm, error)
-	// GetBalance(address []byte) (int, error)
-	// GetBalances() ([]reps.AddressBalance, error)
+	GetBalances() ([]reps.AddressBalance, error)
+	GetBalance(address string) (int, error)
 }
 
 type transactionService struct {
@@ -94,6 +91,7 @@ func (ts *transactionService) CreateCoinbaseTxn(to string, data string) reps.Tra
 	return txnRep
 }
 
+// Given an address, create a coinbase transaction representation
 func (ts *transactionService) ToCoinbaseTxn(to string, data string) reps.Transaction {
 	var txnOut reps.TxnOutput
 	var txnIn reps.TxnInput
@@ -134,7 +132,6 @@ func (ts *transactionService) CreateTransaction(from string, to string, amount i
 	log.WithFields(log.Fields{"from": from, "to": to, "amount": amount}).Info("Creating transaction...")
 
 	var transaction reps.Transaction
-	// var txnOutput reps.TxnOutput
 	txnOutput := ts.NewTxnOutput(amount, to)
 	txnInputs := make([]reps.TxnInput, 0)
 	txnOutputs := make([]reps.TxnOutput, 0)
@@ -145,9 +142,9 @@ func (ts *transactionService) CreateTransaction(from string, to string, amount i
 		return reps.Transaction{}, err
 	}
 
-	utils.PrettyPrintln("Got wallet in CreateTransaction: ", wallet)
-
-	pubKeyHash, _ := ts.walletService.CreatePubKeyHash(wallet.PublicKey)
+	pubKeyBytes, _ := hex.DecodeString(wallet.PublicKey)
+	pubKeyHash, _ := ts.walletService.CreatePubKeyHash(pubKeyBytes)
+	privKey := ts.walletAssembler.ToECDSAPrivateKey(wallet.PrivateKey)
 
 	totalUnspentAmount, validOutputs := ts.GetSpendableOutputs(pubKeyHash, amount)
 	log.WithFields(log.Fields{"totalUnspentAmount": totalUnspentAmount, "validOutputs": utils.Pretty(validOutputs)}).Info("Got spendable outputs")
@@ -172,27 +169,19 @@ func (ts *transactionService) CreateTransaction(from string, to string, amount i
 			input.InputID = inputID
 			input.PrevTxnID = decodedTxnId
 			input.OutIdx = outputIdx
-			input.PubKey = wallet.PublicKey
+			input.PubKey = pubKeyBytes
 			txnInputs = append(txnInputs, input)
 		}
 	}
 
 	transaction.Inputs = txnInputs
 
-	// txnOutput.OutputID = uuid.Must(uuid.NewRandom()).String()
-	// txnOutput.Value = amount
-	// txnOutput.PubKeyHash = []byte(to)
-
 	// Amount sender gave to receiver
 	txnOutputs = append(txnOutputs, txnOutput)
 
 	// Any change associated with sender
 	if totalUnspentAmount > amount {
-		// var txnOutputChange reps.TxnOutput
-		// txnOutputChange.Value = totalUnspentAmount - amount
-		// txnOutputChange.PubKeyHash = from
 		txnOutputChange := ts.NewTxnOutput(totalUnspentAmount-amount, from)
-
 		txnOutputs = append(txnOutputs, txnOutputChange)
 	}
 
@@ -212,7 +201,7 @@ func (ts *transactionService) CreateTransaction(from string, to string, amount i
 	transaction.ID = txnId
 
 	// sign transaction
-	transaction, err = ts.SignTransaction(transaction, wallet.PrivateKey)
+	transaction, err = ts.SignTransaction(transaction, privKey)
 	if err != nil {
 		return reps.Transaction{}, err
 	}
@@ -220,7 +209,9 @@ func (ts *transactionService) CreateTransaction(from string, to string, amount i
 	return transaction, nil
 }
 
+// Get transaction on a block by transactionId
 func (tx *transactionService) GetTransaction(txnId string) (reps.Transaction, error) {
+	log.Info("Attempting to get transaction with transaction id: ", txnId)
 	txnIdByte, err := hex.DecodeString(txnId)
 	if err != nil {
 		log.Error("error decoding string to byte: ", err.Error())
@@ -235,7 +226,9 @@ func (tx *transactionService) GetTransaction(txnId string) (reps.Transaction, er
 	return txn, nil
 }
 
+// Get all transactions that exist on blockchain
 func (ts *transactionService) GetTransactions() ([]reps.Transaction, error) {
+	log.Info("Attempting to get all transactions on the blockchain")
 	txns, err := ts.blockchainRepo.GetTransactions()
 	if err != nil {
 		return []reps.Transaction{}, err
@@ -244,116 +237,61 @@ func (ts *transactionService) GetTransactions() ([]reps.Transaction, error) {
 	return txns, nil
 }
 
-func (ts *transactionService) GetWallets() ([]reps.WalletGorm, error) {
-	wallets, err := ts.blockchainRepo.GetWallets()
+// Get balances for each address / wallet
+func (ts *transactionService) GetBalances() ([]reps.AddressBalance, error) {
+	log.Info("Attempting to get the balance for each wallet / address")
+	wallets, err := ts.walletService.GetWallets()
 	if err != nil {
-		return []reps.WalletGorm{}, err
+		return []reps.AddressBalance{}, err
 	}
 
-	for i := 0; i < len(wallets); i++ {
+	addressBalances := make([]reps.AddressBalance, 0)
+
+	for _, wallet := range wallets {
 		balance := 0
-		wallets[i].WalletByte = nil
-		pubKeyHash := base58Decode([]byte(wallets[i].Address))
-		pubKeyHash = pubKeyHash[1:len(pubKeyHash)-ChecksumLen]
+
+		pubKeyHash := base58Decode([]byte(wallet.Address))
+		pubKeyHash = pubKeyHash[1:len(pubKeyHash)-ChecksumLen]		
 
 		unspentTxnOutputs := ts.GetUnspentTxnOutputs(pubKeyHash)
-		log.Info("unspentTxnOutputs in GetBalance: ", utils.Pretty(unspentTxnOutputs))
-
+		log.Info("unspentTxnOutputs in GetBalances for address: " + wallet.Address, utils.Pretty(unspentTxnOutputs))
+	
 		for _, unspentOutput := range unspentTxnOutputs {
 			balance += unspentOutput.Value
 		}
 
-		wallets[i].Balance = balance
+		addressBalances = append(addressBalances, reps.AddressBalance{Address: wallet.Address, Balance: balance})
 	}
 
-	return wallets, nil
+	return addressBalances, nil
 }
 
-func (ts *transactionService) GetWallet(address string) (reps.WalletGorm, error) {
-	wallet, err := ts.blockchainRepo.GetWallet(address)
+// Get balance for a single address
+func (ts *transactionService) GetBalance(address string) (int, error) {
+	log.Info("Attempting to get the balance for the address: ", address)
+	wallet, err := ts.walletService.GetWallet(address)
 	if err != nil {
-		errMsg := fmt.Errorf("%s, wallet with address %s does not exist", err.Error(), address)
-		return reps.WalletGorm{}, errMsg
+		return 0, err
 	}
 
 	balance := 0
-	wallet.WalletByte = nil
+
 	pubKeyHash := base58Decode([]byte(wallet.Address))
-	pubKeyHash = pubKeyHash[1:len(pubKeyHash)-ChecksumLen]
+	pubKeyHash = pubKeyHash[1:len(pubKeyHash)-ChecksumLen]		
 
 	unspentTxnOutputs := ts.GetUnspentTxnOutputs(pubKeyHash)
-	log.Info("unspentTxnOutputs in GetBalance: ", utils.Pretty(unspentTxnOutputs))
+	log.Info("unspentTxnOutputs in GetBalances for address: " + wallet.Address, utils.Pretty(unspentTxnOutputs))
 
 	for _, unspentOutput := range unspentTxnOutputs {
 		balance += unspentOutput.Value
 	}
 
-	wallet.Balance = balance
-
-	return wallet, nil
+	return balance, nil
 }
-
-
-// func (ts *transactionService) GetAddresses() (map[string]bool, error) {
-// 	addresses, err := ts.blockchainRepo.GetAddresses()
-// 	if err != nil {
-// 		log.Error("error getting addresses: ", err.Error())
-// 		return addresses, err
-// 	}
-
-// 	return addresses, nil
-// }
-
-// func (ts *transactionService) GetBalance(address []byte) (int, error) {
-// 	balance := 0
-
-// 	addresses, err := ts.GetAddresses()
-// 	if err != nil {
-// 		return -1, err
-// 	}
-
-// 	if _, exists := addresses[address]; exists {
-// 		unspentTxnOutputs := ts.GetUnspentTxnOutputs(address)
-// 		log.Info("unspentTxnOutputs in GetBalance: ", utils.Pretty(unspentTxnOutputs))
-	
-// 		for _, unspentOutput := range unspentTxnOutputs {
-// 			balance += unspentOutput.Value
-// 		}
-	
-// 	} else {
-// 		errMsg := fmt.Errorf("could not get balance: address %s was not found", address)
-// 		return -1, errMsg
-// 	}
-
-// 	return balance, nil
-// }
-
-// func (ts *transactionService) GetBalances() ([]reps.AddressBalance, error) {
-// 	addresses, err := ts.GetAddresses()
-// 	if err != nil {
-// 		return []reps.AddressBalance{}, err
-// 	}
-
-// 	balances := make([]reps.AddressBalance, 0)
-
-// 	for key := range addresses {
-// 		balance := 0
-// 		unspentTxnOutputs := ts.GetUnspentTxnOutputs(key)
-// 		log.Info("unspentTxnOutputs in GetBalance: ", utils.Pretty(unspentTxnOutputs))
-	
-// 		for _, unspentOutput := range unspentTxnOutputs {
-// 			balance += unspentOutput.Value
-// 		}
-
-// 		balances = append(balances, reps.AddressBalance{key, balance})
-// 	}
-
-// 	return balances, nil
-// }
 
 // Find out how much of the unspendable outputs from the sender can be spent given an amount
 func (ts *transactionService) GetSpendableOutputs(pubKeyHash []byte, amount int) (int, map[string][]int) {
-	log.WithFields(log.Fields{"from": pubKeyHash, "amount": amount}).Info("Calling GetSpendableOutputs")
+	log.WithFields(log.Fields{"from": hex.EncodeToString(pubKeyHash), "amount": amount}).Info("Calling GetSpendableOutputs")
 	totalUnspentAmount := 0
 
 	// <key>: transactionIds associated with spender
@@ -442,7 +380,7 @@ func (ts *transactionService) GetUnspentTransactions(pubKeyHash []byte) []reps.T
 func (ts *transactionService) GetUnspentTxnOutputs(address []byte) []reps.TxnOutput {
 	unspentTxnOutputs := make([]reps.TxnOutput, 0)
 	unspentTxns := ts.GetUnspentTransactions(address)
-	log.Info("Got unspentTxns in GetUnspentTxnOutputs", utils.Pretty(unspentTxns))
+	// log.Info("Got unspentTxns in GetUnspentTxnOutputs", utils.Pretty(unspentTxns))
 
 	for _, unspentTxn := range unspentTxns {
 		for _, output := range unspentTxn.Outputs {
@@ -455,6 +393,7 @@ func (ts *transactionService) GetUnspentTxnOutputs(address []byte) []reps.TxnOut
 	return unspentTxnOutputs
 }
 
+// Create a new transaction output. Sending of tokens "locks" the output
 func (ts *transactionService) NewTxnOutput(value int, address string) reps.TxnOutput {
 	txnOutput := reps.TxnOutput{
 		OutputID: uuid.Must(uuid.NewRandom()).String(),
@@ -466,6 +405,7 @@ func (ts *transactionService) NewTxnOutput(value int, address string) reps.TxnOu
 } 
 
 func (ts *transactionService) SignTransaction(txn reps.Transaction, privKey ecdsa.PrivateKey) (reps.Transaction, error) {
+	log.Info("Attempting to sign transaction: ", hex.EncodeToString(txn.ID))
 	prevTxns := make(map[string]reps.Transaction)
 
 	for _, input := range txn.Inputs {
@@ -480,13 +420,15 @@ func (ts *transactionService) SignTransaction(txn reps.Transaction, privKey ecds
 	return ts.Sign(privKey, txn, prevTxns)
 }
 
-func (ts *transactionService) VerifyTransaction(txn reps.Transaction) (bool) {
+func (ts *transactionService) VerifyTransaction(txn reps.Transaction) (bool, error) {
+	log.Info("Attempting to verify transaction: ", hex.EncodeToString(txn.ID))
 	prevTxns := make(map[string]reps.Transaction)
 
 	for _, input := range txn.Inputs {
 		prevTxn, err := ts.blockchainRepo.GetTransaction(input.PrevTxnID)
 		if err != nil {
 			log.Error("error finding previous transaction with id: ", input.PrevTxnID)
+			return false, err
 		}
 		prevTxns[hex.EncodeToString(prevTxn.ID)] = prevTxn
 	}
@@ -495,6 +437,7 @@ func (ts *transactionService) VerifyTransaction(txn reps.Transaction) (bool) {
 }
 
 func (ts *transactionService) Sign(privKey ecdsa.PrivateKey, txn reps.Transaction, prevTxns map[string]reps.Transaction) (reps.Transaction, error) {
+	log.Info("Attempting to sign: ", hex.EncodeToString(txn.ID))
 	if ts.IsCoinbaseTransaction(txn) {
 		return reps.Transaction{}, nil
 	}
@@ -509,7 +452,6 @@ func (ts *transactionService) Sign(privKey ecdsa.PrivateKey, txn reps.Transactio
 
 	// trimmed txn copy is signed, not a full one
 	txnCopy := ts.CreateTrimmedTxnCopy(txn)
-	utils.PrettyPrintln("txnCopy", txnCopy)
 
 	for inIdx, input := range txnCopy.Inputs {
 		prevTxn := prevTxns[hex.EncodeToString(input.PrevTxnID)]
@@ -536,11 +478,17 @@ func (ts *transactionService) Sign(privKey ecdsa.PrivateKey, txn reps.Transactio
 	// Update db with signature
 }
 
-func (ts *transactionService) VerifySignature(currTxn reps.Transaction, prevTxns map[string]reps.Transaction) bool {
+func (ts *transactionService) VerifySignature(currTxn reps.Transaction, prevTxns map[string]reps.Transaction) (bool, error) {
+	log.Info("Attempting to verify signature of transaction: " + hex.EncodeToString(currTxn.ID) + " with inputs: ", utils.Pretty(currTxn.Inputs))
 	txnCopy := ts.CreateTrimmedTxnCopy(currTxn)
 	curve := elliptic.P256()
 
 	for inIdx, in := range currTxn.Inputs {
+
+		if in.Signature == nil {
+			log.Error("Signature cannot be null, cannot verify.")
+			return false, fmt.Errorf("cannot verify a null signature. Invalid transaction")
+		}
 
 		// need same data that was signed
 		prevTxn := prevTxns[hex.EncodeToString(in.PrevTxnID)]
@@ -567,11 +515,12 @@ func (ts *transactionService) VerifySignature(currTxn reps.Transaction, prevTxns
 
 		// verifies the signature in r, s of hash (txnCopy.ID) using the public key.
 		if ecdsa.Verify(&rawPubKey, txnCopy.ID, &r, &s) == false {
-			return false
+			return false, fmt.Errorf("Signature: %x could not be verified", in.Signature)
 		}
 	}
 
-	return true
+	log.Info("Signature is valid")
+	return true, nil
 }
 
 // Create copy of a transaction, but remove the signature and pub key from the input inside the transaction
@@ -613,7 +562,10 @@ func (ts *transactionService) Lock(output *reps.TxnOutput, address string) {
 	if err != nil {
 		log.WithField("error", err.Error()).Warn("error decoding address " + address)
 	}
+
 	output.PubKeyHash = pubKeyHash[1:len(pubKeyHash)-4] // remove version and checksum
+
+	log.Infof("Locking output with address: %s with PubKeyHash of: ", address, hex.EncodeToString(output.PubKeyHash))
 }
 
 // checks if provided public key hash was used to lock the output
@@ -636,6 +588,6 @@ func createPubKeyHash(pubKey []byte) ([]byte, error) {
 
 	pubKeyHash := ripemdHasher.Sum(nil)
 
-	log.Info(fmt.Sprintf("pubKeyHash: %x\n", pubKeyHash))
+	// log.Info(fmt.Sprintf("pubKeyHash: %x\n", pubKeyHash))
 	return pubKeyHash, err
 }

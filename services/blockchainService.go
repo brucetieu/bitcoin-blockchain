@@ -40,23 +40,20 @@ func NewBlockchainService(blockchainRepo repository.BlockchainRepository,
 	}
 }
 
-// address is wallet address
+// Address is wallet address
 func (bc *blockchainService) CreateBlockchain(address string) (reps.Block, bool, error) {
-	// validate address
+	// Check address is in db to begin with
 	addressValid, err := bc.walletService.ValidateAddress(address)
 	if err != nil {
 		log.Error(err.Error())
 		return reps.Block{}, false, err
 	}
 
+	// Then validate it
 	if !addressValid {
 		log.Errorf("error: address of %s is not valid", address)
 		return reps.Block{}, false, fmt.Errorf("error: address of %s is not valid", address)
 	}
-	// if !bc.walletService.ValidateAddress(address) {
-	// 	log.Errorf("error: address of %s is not valid", address)
-	// 	return reps.Block{}, false, fmt.Errorf("error: address of %s is not valid", address)
-	// }
 
 	// Try to get genesis block
 	genesis, err := bc.GetGenesisBlock()
@@ -78,25 +75,22 @@ func (bc *blockchainService) CreateBlockchain(address string) (reps.Block, bool,
 	return genesis, true, nil
 }
 
+// Mine a block
 func (bc *blockchainService) AddToBlockChain(from string, to string, amount int) (reps.Block, error) {
-	// Validate from and to are valid addresses
+	// Validate from and to exist in the db and are valid addresses
 	addressValid, err := bc.walletService.ValidateAddress(from)
 	if err != nil {
-		log.Error(err.Error())
 		return reps.Block{}, err
 	}
 	if !addressValid {
-		log.Errorf("error: address of %s is not valid", from)
 		return reps.Block{}, fmt.Errorf("error: address of %s is not valid", from)
 	}
 
 	addressValid, err = bc.walletService.ValidateAddress(to)
 	if err != nil {
-		log.Error(err.Error())
 		return reps.Block{}, err
 	}
 	if !addressValid {
-		log.Errorf("error: address of %s is not valid", to)
 		return reps.Block{}, fmt.Errorf("error: address of %s is not valid", to)
 	}
 
@@ -116,7 +110,8 @@ func (bc *blockchainService) AddToBlockChain(from string, to string, amount int)
 	// Verify the signatures on transaction inputs
 	txns := []reps.Transaction{newTxn}
 	for _, txn := range txns {
-		if !bc.transactionService.VerifyTransaction(txn) {
+		verifiedTxn, err := bc.transactionService.VerifyTransaction(txn)
+		if !verifiedTxn {
 			log.WithField("error", err.Error()).Error("error: invalid transaction")
 			return reps.Block{}, err
 		}
@@ -162,10 +157,10 @@ func (bc *blockchainService) GetGenesisBlock() (reps.Block, error) {
 	return genesis, nil
 }
 
+// Get block on blockchain by its block id
 func (bc *blockchainService) GetBlock(blockId string) (reps.Block, error) {
 	block, err := bc.blockchainRepo.GetBlockById(blockId)
 	if err != nil {
-		log.Error("error getting block: ", err.Error())
 		errMsg := fmt.Errorf("%s, id: %s", err.Error(), blockId)
 		return reps.Block{}, errMsg
 	}
@@ -173,6 +168,7 @@ func (bc *blockchainService) GetBlock(blockId string) (reps.Block, error) {
 	return block, nil
 }
 
+// Get the last block in the blockchain
 func (bc *blockchainService) GetLastBlock() (reps.Block, error) {
 	lastBlock, err := bc.blockchainRepo.GetLastBlock()
 	if err != nil {

@@ -36,7 +36,7 @@ type ReadableTxnOutput struct {
 // InputID -> unique id of the TxnInput
 // CurrTxnId -> What transaction is this input currently in?
 // OutIdx -> From which output index was used to create this input?
-// PrevTxnID -> From which previous transaction was used to create this input?
+// PrevTxnID -> From which previous transaction was and ouptut used to create this input?
 // ScriptSig ->  Script which provides data to be used in an outputs ScriptPubKey
 type TxnInput struct {
 	InputID string `json:"inputId" gorm:"primary_key"`

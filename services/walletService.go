@@ -6,11 +6,12 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/brucetieu/blockchain/repository"
 	reps "github.com/brucetieu/blockchain/representations"
-	"github.com/brucetieu/blockchain/utils"
+	// "github.com/brucetieu/blockchain/utils"
 	"golang.org/x/crypto/ripemd160"
 
 	"github.com/akamensky/base58"
@@ -27,11 +28,14 @@ var (
 type WalletService interface {
 	CreateWallet() (reps.Wallet, error)
 	GetWallet(address string) (reps.Wallet, error)
-	// GetWallets() ([]reps.WalletGorm, error)
+	// GetWalletGorm(address string) (reps.WalletGorm, error)
+	GetWallets() ([]reps.Wallet, error)
+
 	CreateKeyPair() (ecdsa.PrivateKey, []byte)
 	CreatePubKeyHash(pubKey []byte) ([]byte, error)
 	CreateChecksum(pubKeyHash []byte) []byte
 	CreateAddress(pubKey []byte) ([]byte, error)
+
 	ValidateAddress(address string) (bool, error)
 }
 
@@ -54,18 +58,19 @@ func (ws *walletService) CreateKeyPair() (ecdsa.PrivateKey, []byte) {
 	// Public key is a combination of x and y coordinates on elliptic curve
 	pubKey := append(privKey.X.Bytes(), privKey.Y.Bytes()...)
 
-	log.Info(fmt.Sprintf("pubKey: %x\n", pubKey))
+	// log.Info(fmt.Sprintf("pubKey: %x\n", pubKey))
 	return *privKey, pubKey
 }
 
 func (ws *walletService) GetWallet(address string) (reps.Wallet, error) {
-	walletGorm, err := ws.blockchainRepo.GetWallet(address)
+	wallet, err := ws.blockchainRepo.GetWallet(address)
 	if err != nil {
-		return reps.Wallet{}, err
+		errMsg := fmt.Errorf("%s, wallet with address %s does not exist", err.Error(), address)
+		return reps.Wallet{}, errMsg
 	}
 
-	utils.PrettyPrintln("walletGorm in ws.GetWallet: ", walletGorm)
-	return ws.walletAssember.ToWallet(&walletGorm), nil
+	// utils.PrettyPrintln("Got wallet in ws.GetWallet: ", wallet.PublicKey)
+	return wallet, nil
 }	
 
 func (ws *walletService) CreateWallet() (reps.Wallet, error) {
@@ -78,16 +83,26 @@ func (ws *walletService) CreateWallet() (reps.Wallet, error) {
 
 	log.Info("wallet address: ", string(walletAddress))
 
-	wallet := reps.Wallet{uuid.Must(uuid.NewRandom()).String(), string(walletAddress), privKey, pubKey}
+	privKeyBytes := ws.walletAssember.ToPrivateKeyBytes(privKey)
+	wallet := reps.Wallet{uuid.Must(uuid.NewRandom()).String(), string(walletAddress), privKeyBytes, hex.EncodeToString(pubKey)}
 
-	utils.PrettyPrintln("wallet: ", wallet)
+	// utils.PrettyPrintln("wallet: ", wallet)
 	// Persist
-	err = ws.blockchainRepo.CreateWallet(ws.walletAssember.ToGormWallet(&wallet))
+	err = ws.blockchainRepo.CreateWallet(wallet)
 	if err != nil {
 		return reps.Wallet{}, err
 	}
 
 	return wallet, nil
+}
+
+func (ws *walletService) GetWallets() ([]reps.Wallet, error) {
+	wallets, err := ws.blockchainRepo.GetWallets()
+	if err != nil {
+		return []reps.Wallet{}, err
+	}
+
+	return wallets, nil
 }
 
 // pubKeyHash = ripemd160(sha256(pubKey))
@@ -102,7 +117,7 @@ func (ws *walletService) CreatePubKeyHash(pubKey []byte) ([]byte, error) {
 
 	pubKeyHash := ripemdHasher.Sum(nil)
 
-	log.Info(fmt.Sprintf("pubKeyHash: %x\n", pubKeyHash))
+	// log.Info(fmt.Sprintf("pubKeyHash: %x\n", pubKeyHash))
 	return pubKeyHash, err
 }
 
@@ -137,13 +152,15 @@ func (ws *walletService) CreateAddress(pubKey []byte) ([]byte, error) {
 }
 
 func (ws *walletService) ValidateAddress(address string) (bool, error) {
-	// query address from db first
+	log.Info("Validating address: ", address)
+	// Check if address exists in db first
 	_, err := ws.GetWallet(address)
 	if err != nil {
 		errMsg := fmt.Errorf("%s: wallet with address %s does not exist", err.Error(), address)
 		return false, errMsg
 	}
 
+	// Deconstruct address and get the pubKeyHash to check if it's actually valid
 	pubKeyHash := base58Decode([]byte(address))
 	actualChecksum := pubKeyHash[len(pubKeyHash)-ChecksumLen:]
 	pubKeyHash = pubKeyHash[1:len(pubKeyHash)-ChecksumLen]
@@ -154,7 +171,6 @@ func (ws *walletService) ValidateAddress(address string) (bool, error) {
 	}
 
 	return false, nil
-	// return bytes.Compare(actualChecksum, expectedChecksum) == 0
 }
 
 func base58Decode(address []byte) []byte {
