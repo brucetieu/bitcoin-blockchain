@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+
 	"github.com/brucetieu/blockchain/services"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -54,7 +55,7 @@ func (wh *WalletHandler) GetWallets(c *gin.Context) {
 	for i := 0; i < len(wallets); i++ {
 		wallets[i].PrivateKey = nil
 	}
-	
+
 	if err != nil {
 		log.Error("error getting all wallets: ", err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -62,4 +63,3 @@ func (wh *WalletHandler) GetWallets(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"wallets": wallets})
 	}
 }
-

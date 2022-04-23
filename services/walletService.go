@@ -41,7 +41,7 @@ type WalletService interface {
 
 type walletService struct {
 	blockchainRepo repository.BlockchainRepository
-	walletAssember   WalletAssemblerFac
+	walletAssember WalletAssemblerFac
 }
 
 func NewWalletService(blockchainRepo repository.BlockchainRepository) WalletService {
@@ -71,7 +71,7 @@ func (ws *walletService) GetWallet(address string) (reps.Wallet, error) {
 
 	// utils.PrettyPrintln("Got wallet in ws.GetWallet: ", wallet.PublicKey)
 	return wallet, nil
-}	
+}
 
 func (ws *walletService) CreateWallet() (reps.Wallet, error) {
 	privKey, pubKey := ws.CreateKeyPair()
@@ -163,7 +163,7 @@ func (ws *walletService) ValidateAddress(address string) (bool, error) {
 	// Deconstruct address and get the pubKeyHash to check if it's actually valid
 	pubKeyHash := base58Decode([]byte(address))
 	actualChecksum := pubKeyHash[len(pubKeyHash)-ChecksumLen:]
-	pubKeyHash = pubKeyHash[1:len(pubKeyHash)-ChecksumLen]
+	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-ChecksumLen]
 	expectedChecksum := ws.CreateChecksum(pubKeyHash)
 
 	if bytes.Compare(actualChecksum, expectedChecksum) == 0 {

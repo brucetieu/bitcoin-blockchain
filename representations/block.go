@@ -20,10 +20,10 @@ type Block struct {
 }
 
 type ReadableBlock struct {
-	ID           string        `gorm:"primary_key;type:char(36);column:block_id"`
-	Timestamp    int64         `json:"timestamp"`
+	ID           string                `gorm:"primary_key;type:char(36);column:block_id"`
+	Timestamp    int64                 `json:"timestamp"`
 	Transactions []ReadableTransaction `json:"transactions" gorm:"foreignKey:BlockID"`
-	PrevHash     string       `json:"prevHash"`
-	Hash         string        `json:"hash"`
-	Nounce       int64         `json:"nounce"`
+	PrevHash     string                `json:"prevHash"`
+	Hash         string                `json:"hash"`
+	Nounce       int64                 `json:"nounce"`
 }
