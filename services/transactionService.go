@@ -24,7 +24,7 @@ import (
 	// "github.com/google/uuid"
 )
 
-var Reward = 500  // Initial reward miner gets for mining the first block
+var Reward = 500 // Initial reward miner gets for mining the first block
 
 type TransactionService interface {
 	NewTxnOutput(value int, address string) reps.TxnOutput
@@ -52,19 +52,19 @@ type TransactionService interface {
 }
 
 type transactionService struct {
-	blockchainRepo repository.BlockchainRepository
-	walletService  WalletService
-	blockAssembler BlockAssemblerFac
-	txnAssembler   TxnAssemblerFac
+	blockchainRepo  repository.BlockchainRepository
+	walletService   WalletService
+	blockAssembler  BlockAssemblerFac
+	txnAssembler    TxnAssemblerFac
 	walletAssembler WalletAssemblerFac
 }
 
 func NewTransactionService(blockchainRepo repository.BlockchainRepository, walletService WalletService) TransactionService {
 	return &transactionService{
-		blockchainRepo: blockchainRepo,
-		walletService: walletService,
-		blockAssembler: BlockAssembler,
-		txnAssembler:   TxnAssembler,
+		blockchainRepo:  blockchainRepo,
+		walletService:   walletService,
+		blockAssembler:  BlockAssembler,
+		txnAssembler:    TxnAssembler,
 		walletAssembler: WalletAssembler,
 	}
 }
@@ -109,7 +109,7 @@ func (ts *transactionService) ToCoinbaseTxn(to string, data string) reps.Transac
 	txnIn.PrevTxnID = []byte{}
 	txnIn.OutIdx = -1
 	txnIn.PubKey = []byte(data)
-	txnIn.Signature = nil  // don't sign coinbase txn
+	txnIn.Signature = nil // don't sign coinbase txn
 
 	txnRep.Outputs = []reps.TxnOutput{txnOut}
 	txnRep.Inputs = []reps.TxnInput{txnIn}
@@ -251,11 +251,11 @@ func (ts *transactionService) GetBalances() ([]reps.AddressBalance, error) {
 		balance := 0
 
 		pubKeyHash := base58Decode([]byte(wallet.Address))
-		pubKeyHash = pubKeyHash[1:len(pubKeyHash)-ChecksumLen]		
+		pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-ChecksumLen]
 
 		unspentTxnOutputs := ts.GetUnspentTxnOutputs(pubKeyHash)
-		log.Info("unspentTxnOutputs in GetBalances for address: " + wallet.Address, utils.Pretty(unspentTxnOutputs))
-	
+		log.Info("unspentTxnOutputs in GetBalances for address: "+wallet.Address, utils.Pretty(unspentTxnOutputs))
+
 		for _, unspentOutput := range unspentTxnOutputs {
 			balance += unspentOutput.Value
 		}
@@ -277,10 +277,10 @@ func (ts *transactionService) GetBalance(address string) (int, error) {
 	balance := 0
 
 	pubKeyHash := base58Decode([]byte(wallet.Address))
-	pubKeyHash = pubKeyHash[1:len(pubKeyHash)-ChecksumLen]		
+	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-ChecksumLen]
 
 	unspentTxnOutputs := ts.GetUnspentTxnOutputs(pubKeyHash)
-	log.Info("unspentTxnOutputs in GetBalances for address: " + wallet.Address, utils.Pretty(unspentTxnOutputs))
+	log.Info("unspentTxnOutputs in GetBalances for address: "+wallet.Address, utils.Pretty(unspentTxnOutputs))
 
 	for _, unspentOutput := range unspentTxnOutputs {
 		balance += unspentOutput.Value
@@ -396,13 +396,13 @@ func (ts *transactionService) GetUnspentTxnOutputs(address []byte) []reps.TxnOut
 // Create a new transaction output. Sending of tokens "locks" the output
 func (ts *transactionService) NewTxnOutput(value int, address string) reps.TxnOutput {
 	txnOutput := reps.TxnOutput{
-		OutputID: uuid.Must(uuid.NewRandom()).String(),
-		Value: value,
+		OutputID:   uuid.Must(uuid.NewRandom()).String(),
+		Value:      value,
 		PubKeyHash: nil,
 	}
 	ts.Lock(&txnOutput, address)
 	return txnOutput
-} 
+}
 
 func (ts *transactionService) SignTransaction(txn reps.Transaction, privKey ecdsa.PrivateKey) (reps.Transaction, error) {
 	log.Info("Attempting to sign transaction: ", hex.EncodeToString(txn.ID))
@@ -479,7 +479,7 @@ func (ts *transactionService) Sign(privKey ecdsa.PrivateKey, txn reps.Transactio
 }
 
 func (ts *transactionService) VerifySignature(currTxn reps.Transaction, prevTxns map[string]reps.Transaction) (bool, error) {
-	log.Info("Attempting to verify signature of transaction: " + hex.EncodeToString(currTxn.ID) + " with inputs: ", utils.Pretty(currTxn.Inputs))
+	log.Info("Attempting to verify signature of transaction: "+hex.EncodeToString(currTxn.ID)+" with inputs: ", utils.Pretty(currTxn.Inputs))
 	txnCopy := ts.CreateTrimmedTxnCopy(currTxn)
 	curve := elliptic.P256()
 
@@ -495,21 +495,21 @@ func (ts *transactionService) VerifySignature(currTxn reps.Transaction, prevTxns
 		txnCopy.Inputs[inIdx].Signature = nil
 		txnCopy.Inputs[inIdx].PubKey = prevTxn.Outputs[in.OutIdx].PubKeyHash
 		txnCopy.ID = ts.txnAssembler.HashTransaction(txnCopy)
-		txnCopy.Inputs[inIdx].PubKey = nil 
+		txnCopy.Inputs[inIdx].PubKey = nil
 
 		// Unpack signature, signature is a pair of numbers
 		r := big.Int{}
 		s := big.Int{}
 		sigLen := len(in.Signature)
-		r.SetBytes(in.Signature[:(sigLen/2)])
-		s.SetBytes(in.Signature[(sigLen/2):])
+		r.SetBytes(in.Signature[:(sigLen / 2)])
+		s.SetBytes(in.Signature[(sigLen / 2):])
 
 		// Unpack pubKey, pubKey is a pair of points
 		x := big.Int{}
 		y := big.Int{}
 		pubKeyLen := len(in.PubKey)
-		x.SetBytes(in.PubKey[:(pubKeyLen/2)])
-		y.SetBytes(in.PubKey[(pubKeyLen/2):])
+		x.SetBytes(in.PubKey[:(pubKeyLen / 2)])
+		y.SetBytes(in.PubKey[(pubKeyLen / 2):])
 
 		rawPubKey := ecdsa.PublicKey{curve, &x, &y}
 
@@ -537,15 +537,15 @@ func (ts *transactionService) CreateTrimmedTxnCopy(txn reps.Transaction) reps.Tr
 	}
 
 	txnCopy := reps.Transaction{
-		ID: txn.ID,
-		Inputs: inputs,
+		ID:      txn.ID,
+		Inputs:  inputs,
 		Outputs: outputs,
 	}
 
 	return txnCopy
 }
 
-// checks that an input uses a specific key to unlock an output. 
+// checks that an input uses a specific key to unlock an output.
 // input.PubKey is not hashed, so hash it to compare it with hashed pub key of output
 func (ts *transactionService) UsesKey(input reps.TxnInput, pubKeyHash []byte) bool {
 	lockingHash, err := createPubKeyHash(input.PubKey)
@@ -563,7 +563,7 @@ func (ts *transactionService) Lock(output *reps.TxnOutput, address string) {
 		log.WithField("error", err.Error()).Warn("error decoding address " + address)
 	}
 
-	output.PubKeyHash = pubKeyHash[1:len(pubKeyHash)-4] // remove version and checksum
+	output.PubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4] // remove version and checksum
 
 	log.Infof("Locking output with address: %s with PubKeyHash of: ", address, hex.EncodeToString(output.PubKeyHash))
 }

@@ -25,7 +25,7 @@ type blockchainService struct {
 	blockchainRepo     repository.BlockchainRepository
 	blockService       BlockService
 	transactionService TransactionService
-	walletService WalletService
+	walletService      WalletService
 	blockAssembler     BlockAssemblerFac
 }
 
@@ -35,7 +35,7 @@ func NewBlockchainService(blockchainRepo repository.BlockchainRepository,
 		blockchainRepo:     blockchainRepo,
 		blockService:       blockService,
 		transactionService: transactionService,
-		walletService: walletService,
+		walletService:      walletService,
 		blockAssembler:     BlockAssembler,
 	}
 }
@@ -101,7 +101,7 @@ func (bc *blockchainService) AddToBlockChain(from string, to string, amount int)
 		return reps.Block{}, errMsg
 	}
 
-	// Create a new transaction. 
+	// Create a new transaction.
 	newTxn, err := bc.transactionService.CreateTransaction(from, to, amount)
 	if err != nil {
 		return reps.Block{}, err

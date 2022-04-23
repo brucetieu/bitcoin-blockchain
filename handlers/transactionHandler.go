@@ -10,13 +10,13 @@ import (
 
 type TransactionHandler struct {
 	transactionService services.TransactionService
-	assemblerService  services.TxnAssemblerFac
+	assemblerService   services.TxnAssemblerFac
 }
 
 func NewTransactionHandler(transactionService services.TransactionService) *TransactionHandler {
 	return &TransactionHandler{
 		transactionService: transactionService,
-		assemblerService: services.TxnAssembler,
+		assemblerService:   services.TxnAssembler,
 	}
 }
 
@@ -56,7 +56,6 @@ func (th *TransactionHandler) GetBalances(c *gin.Context) {
 	}
 }
 
-
 func (th *TransactionHandler) GetBalance(c *gin.Context) {
 	log.Info("GetBalances called")
 	address := c.Param("address")
@@ -69,4 +68,3 @@ func (th *TransactionHandler) GetBalance(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"balance": balance})
 	}
 }
-

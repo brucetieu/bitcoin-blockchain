@@ -127,7 +127,7 @@ func (bch *BlockchainHandler) GetBlock(c *gin.Context) {
 	}
 }
 
-// Get last block in blockchain. If it's a genesis, it will return it. 
+// Get last block in blockchain. If it's a genesis, it will return it.
 func (bch *BlockchainHandler) GetLastBlock(c *gin.Context) {
 	log.Info("Getting last block...")
 
@@ -139,4 +139,3 @@ func (bch *BlockchainHandler) GetLastBlock(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"block": bch.assemblerService.ToReadableBlock(lastBlock)})
 	}
 }
-
