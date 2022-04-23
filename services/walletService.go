@@ -1,15 +1,17 @@
 package services
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/brucetieu/blockchain/repository"
 	reps "github.com/brucetieu/blockchain/representations"
-	"github.com/sirupsen/logrus"
+	// "github.com/brucetieu/blockchain/utils"
 	"golang.org/x/crypto/ripemd160"
 
 	"github.com/akamensky/base58"
@@ -25,19 +27,27 @@ var (
 
 type WalletService interface {
 	CreateWallet() (reps.Wallet, error)
+	GetWallet(address string) (reps.Wallet, error)
+	// GetWalletGorm(address string) (reps.WalletGorm, error)
+	GetWallets() ([]reps.Wallet, error)
+
 	CreateKeyPair() (ecdsa.PrivateKey, []byte)
 	CreatePubKeyHash(pubKey []byte) ([]byte, error)
 	CreateChecksum(pubKeyHash []byte) []byte
 	CreateAddress(pubKey []byte) ([]byte, error)
+
+	ValidateAddress(address string) (bool, error)
 }
 
 type walletService struct {
 	blockchainRepo repository.BlockchainRepository
+	walletAssember   WalletAssemblerFac
 }
 
 func NewWalletService(blockchainRepo repository.BlockchainRepository) WalletService {
 	return &walletService{
 		blockchainRepo: blockchainRepo,
+		walletAssember: WalletAssembler,
 	}
 }
 
@@ -48,9 +58,20 @@ func (ws *walletService) CreateKeyPair() (ecdsa.PrivateKey, []byte) {
 	// Public key is a combination of x and y coordinates on elliptic curve
 	pubKey := append(privKey.X.Bytes(), privKey.Y.Bytes()...)
 
-	log.Info(fmt.Sprintf("pubKey: %x\n", pubKey))
+	// log.Info(fmt.Sprintf("pubKey: %x\n", pubKey))
 	return *privKey, pubKey
 }
+
+func (ws *walletService) GetWallet(address string) (reps.Wallet, error) {
+	wallet, err := ws.blockchainRepo.GetWallet(address)
+	if err != nil {
+		errMsg := fmt.Errorf("%s, wallet with address %s does not exist", err.Error(), address)
+		return reps.Wallet{}, errMsg
+	}
+
+	// utils.PrettyPrintln("Got wallet in ws.GetWallet: ", wallet.PublicKey)
+	return wallet, nil
+}	
 
 func (ws *walletService) CreateWallet() (reps.Wallet, error) {
 	privKey, pubKey := ws.CreateKeyPair()
@@ -62,8 +83,10 @@ func (ws *walletService) CreateWallet() (reps.Wallet, error) {
 
 	log.Info("wallet address: ", string(walletAddress))
 
-	wallet := reps.Wallet{uuid.Must(uuid.NewRandom()).String(), string(walletAddress), privKey.D.Bytes(), pubKey}
+	privKeyBytes := ws.walletAssember.ToPrivateKeyBytes(privKey)
+	wallet := reps.Wallet{uuid.Must(uuid.NewRandom()).String(), string(walletAddress), privKeyBytes, hex.EncodeToString(pubKey)}
 
+	// utils.PrettyPrintln("wallet: ", wallet)
 	// Persist
 	err = ws.blockchainRepo.CreateWallet(wallet)
 	if err != nil {
@@ -73,6 +96,15 @@ func (ws *walletService) CreateWallet() (reps.Wallet, error) {
 	return wallet, nil
 }
 
+func (ws *walletService) GetWallets() ([]reps.Wallet, error) {
+	wallets, err := ws.blockchainRepo.GetWallets()
+	if err != nil {
+		return []reps.Wallet{}, err
+	}
+
+	return wallets, nil
+}
+
 // pubKeyHash = ripemd160(sha256(pubKey))
 func (ws *walletService) CreatePubKeyHash(pubKey []byte) ([]byte, error) {
 	pubHash := sha256.Sum256(pubKey)
@@ -80,12 +112,12 @@ func (ws *walletService) CreatePubKeyHash(pubKey []byte) ([]byte, error) {
 	ripemdHasher := ripemd160.New()
 	_, err := ripemdHasher.Write(pubHash[:])
 	if err != nil {
-		logrus.Error(err.Error())
+		log.Error(err.Error())
 	}
 
 	pubKeyHash := ripemdHasher.Sum(nil)
 
-	log.Info(fmt.Sprintf("pubKeyHash: %x\n", pubKeyHash))
+	// log.Info(fmt.Sprintf("pubKeyHash: %x\n", pubKeyHash))
 	return pubKeyHash, err
 }
 
@@ -117,6 +149,33 @@ func (ws *walletService) CreateAddress(pubKey []byte) ([]byte, error) {
 	address := base58Encode(finalHash)
 
 	return address, nil
+}
+
+func (ws *walletService) ValidateAddress(address string) (bool, error) {
+	log.Info("Validating address: ", address)
+	// Check if address exists in db first
+	_, err := ws.GetWallet(address)
+	if err != nil {
+		errMsg := fmt.Errorf("%s: wallet with address %s does not exist", err.Error(), address)
+		return false, errMsg
+	}
+
+	// Deconstruct address and get the pubKeyHash to check if it's actually valid
+	pubKeyHash := base58Decode([]byte(address))
+	actualChecksum := pubKeyHash[len(pubKeyHash)-ChecksumLen:]
+	pubKeyHash = pubKeyHash[1:len(pubKeyHash)-ChecksumLen]
+	expectedChecksum := ws.CreateChecksum(pubKeyHash)
+
+	if bytes.Compare(actualChecksum, expectedChecksum) == 0 {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+func base58Decode(address []byte) []byte {
+	base58Decoded, _ := base58.Decode(string(address))
+	return base58Decoded
 }
 
 func base58Encode(hash []byte) []byte {

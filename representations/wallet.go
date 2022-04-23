@@ -1,13 +1,15 @@
 package representations
 
-import (
-// "crypto/ecdsa"
-)
-
 type Wallet struct {
-	// PrivateKey ecdsa.PrivateKey
-	ID         string `json:"id" gorm:"primary_key"`
-	Address    string
-	PrivateKey []byte
-	PublicKey  []byte
+	ID         string `json:"id,omitempty" gorm:"primary_key"`
+	Address    string  `json:"address,omitempty"`
+	PrivateKey []byte `json:"privateKey,omitempty"`
+	PublicKey  string`json:"publicKey,omitempty"`
+}
+
+// This represents balance information for a wallet (address)
+type AddressBalance struct {
+	Address string `json:"address,omitempty"`
+	PublicKey string `json:"publicKey,omitempty"`
+	Balance int `json:"balance"`
 }
