@@ -18,8 +18,8 @@ import (
 )
 
 var (
-	BlockAssembler BlockAssemblerFac
-	TxnAssembler   TxnAssemblerFac
+	BlockAssembler  BlockAssemblerFac
+	TxnAssembler    TxnAssemblerFac
 	WalletAssembler WalletAssemblerFac
 )
 
@@ -168,7 +168,7 @@ func (b *blockAssembler) ToReadableBlock(block reps.Block) reps.ReadableBlock {
 				CurrTxnID: hex.EncodeToString(txn.ID),
 				PrevTxnID: hex.EncodeToString(in.PrevTxnID),
 				OutIdx:    in.OutIdx,
-				PubKey: hex.EncodeToString(in.PubKey),
+				PubKey:    hex.EncodeToString(in.PubKey),
 				Signature: hex.EncodeToString(in.Signature),
 			}
 			inputs = append(inputs, input)
@@ -177,8 +177,8 @@ func (b *blockAssembler) ToReadableBlock(block reps.Block) reps.ReadableBlock {
 		var outputs []reps.ReadableTxnOutput
 		for _, out := range txn.Outputs {
 			output := reps.ReadableTxnOutput{
-				CurrTxnID:    hex.EncodeToString(txn.ID),
-				Value:        out.Value,
+				CurrTxnID:  hex.EncodeToString(txn.ID),
+				Value:      out.Value,
 				PubKeyHash: hex.EncodeToString(out.PubKeyHash),
 			}
 			outputs = append(outputs, output)
@@ -209,7 +209,7 @@ func (t *txnAssembler) ToReadableTransactions(txns []reps.Transaction) []reps.Re
 			input := reps.ReadableTxnInput{
 				CurrTxnID: hex.EncodeToString(txn.ID),
 				PrevTxnID: hex.EncodeToString(in.PrevTxnID),
-				PubKey: hex.EncodeToString(in.PubKey),
+				PubKey:    hex.EncodeToString(in.PubKey),
 				Signature: hex.EncodeToString(in.Signature),
 			}
 			inputs = append(inputs, input)
@@ -218,8 +218,8 @@ func (t *txnAssembler) ToReadableTransactions(txns []reps.Transaction) []reps.Re
 		var outputs []reps.ReadableTxnOutput
 		for _, out := range txn.Outputs {
 			output := reps.ReadableTxnOutput{
-				CurrTxnID:    hex.EncodeToString(txn.ID),
-				Value:        out.Value,
+				CurrTxnID:  hex.EncodeToString(txn.ID),
+				Value:      out.Value,
 				PubKeyHash: hex.EncodeToString(out.PubKeyHash),
 			}
 			outputs = append(outputs, output)
@@ -240,7 +240,7 @@ func (t *txnAssembler) ToReadableTransactions(txns []reps.Transaction) []reps.Re
 
 func (t *txnAssembler) ToReadableTransaction(txn reps.Transaction) reps.ReadableTransaction {
 	readableTxn := reps.ReadableTransaction{
-		ID: hex.EncodeToString(txn.ID),
+		ID:      hex.EncodeToString(txn.ID),
 		BlockID: txn.BlockID,
 	}
 
@@ -250,7 +250,7 @@ func (t *txnAssembler) ToReadableTransaction(txn reps.Transaction) reps.Readable
 			CurrTxnID: hex.EncodeToString(txn.ID),
 			PrevTxnID: hex.EncodeToString(in.PrevTxnID),
 			OutIdx:    in.OutIdx,
-			PubKey: hex.EncodeToString(in.PubKey),
+			PubKey:    hex.EncodeToString(in.PubKey),
 			Signature: hex.EncodeToString(in.Signature),
 		}
 		inputs = append(inputs, input)
@@ -259,8 +259,8 @@ func (t *txnAssembler) ToReadableTransaction(txn reps.Transaction) reps.Readable
 	var outputs []reps.ReadableTxnOutput
 	for _, out := range txn.Outputs {
 		output := reps.ReadableTxnOutput{
-			CurrTxnID:    hex.EncodeToString(txn.ID),
-			Value:        out.Value,
+			CurrTxnID:  hex.EncodeToString(txn.ID),
+			Value:      out.Value,
 			PubKeyHash: hex.EncodeToString(out.PubKeyHash),
 		}
 		outputs = append(outputs, output)
