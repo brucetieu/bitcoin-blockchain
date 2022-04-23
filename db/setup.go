@@ -1,8 +1,6 @@
 package db
 
 import (
-	// "github.com/jinzhu/gorm"
-	// "github.com/brucetieu/blockchain/models"
 	reps "github.com/brucetieu/blockchain/representations"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"gorm.io/driver/postgres"
