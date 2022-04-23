@@ -23,9 +23,11 @@ var (
 	WalletAssembler WalletAssemblerFac
 )
 
-type blockAssembler struct{}
-type txnAssembler struct{}
-type walletAssembler struct{}
+type (
+	blockAssembler  struct{}
+	txnAssembler    struct{}
+	walletAssembler struct{}
+)
 
 func NewBlockAssemblerFac() BlockAssemblerFac {
 	return &blockAssembler{}
@@ -299,5 +301,4 @@ func (w *walletAssembler) ToECDSAPrivateKey(privKeyBytes []byte) ecdsa.PrivateKe
 	}
 
 	return privKey
-
 }

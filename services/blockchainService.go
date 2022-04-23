@@ -30,7 +30,8 @@ type blockchainService struct {
 }
 
 func NewBlockchainService(blockchainRepo repository.BlockchainRepository,
-	blockService BlockService, transactionService TransactionService, walletService WalletService) BlockchainService {
+	blockService BlockService, transactionService TransactionService, walletService WalletService,
+) BlockchainService {
 	return &blockchainService{
 		blockchainRepo:     blockchainRepo,
 		blockService:       blockService,
@@ -61,7 +62,6 @@ func (bc *blockchainService) CreateBlockchain(address string) (reps.Block, bool,
 		log.Info("Genesis doesn't exist, so creating it now...")
 		coinbaseTxn := bc.transactionService.CreateCoinbaseTxn(address, "First transaction in Blockchain")
 		newBlock, err := bc.blockService.CreateBlock([]reps.Transaction{coinbaseTxn}, []byte{})
-
 		// Persist
 		if err != nil {
 			log.Error("Error creating blockchain: ", err.Error())

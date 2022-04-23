@@ -97,7 +97,6 @@ func (bch *BlockchainHandler) GetBlockchain(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"blockchain": data})
-
 }
 
 // Get the first block in block chain

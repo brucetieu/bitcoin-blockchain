@@ -447,7 +447,6 @@ func (ts *transactionService) Sign(privKey ecdsa.PrivateKey, txn reps.Transactio
 			log.WithField("input currTxnID", in.PrevTxnID).Error("error: previous transaction does not exist")
 			// return reps.Transaction{}, fmt.Errorf("error: previous transaction does not exist with id: %s", in.PrevTxnID)
 		}
-
 	}
 
 	// trimmed txn copy is signed, not a full one
