@@ -2,15 +2,17 @@ package representations
 
 import (
 	"crypto/sha256"
+
 	log "github.com/sirupsen/logrus"
 )
+
 type MerkleTree struct {
 	Root *MerkleNode
 }
 
 type MerkleNode struct {
-	Data []byte
-	Left *MerkleNode
+	Data  []byte
+	Left  *MerkleNode
 	Right *MerkleNode
 }
 
@@ -29,7 +31,7 @@ func NewMerkleNode(left, right *MerkleNode, data []byte) *MerkleNode {
 	merkleNode.Left = left
 	merkleNode.Right = right
 
-	return &merkleNode	
+	return &merkleNode
 }
 
 // Data is a list of transactions
@@ -37,7 +39,7 @@ func NewMerkleTree(txns [][]byte) *MerkleTree {
 	log.Info("Creating new merkle tree")
 	merkleNodes := make([]*MerkleNode, 0)
 	// If number of transactions is odd, make a copy of the last transaction and append it to the transactions to satisfy merkle tree structure
-	if len(txns) % 2 != 0 {
+	if len(txns)%2 != 0 {
 		txns = append(txns, txns[len(txns)-1])
 	}
 

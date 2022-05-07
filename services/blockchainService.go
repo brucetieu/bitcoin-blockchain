@@ -107,7 +107,7 @@ func (bc *blockchainService) AddToBlockChain(from string, to string, amount int)
 		return reps.Block{}, err
 	}
 
-	// Also create a new coinbase transaction 
+	// Also create a new coinbase transaction
 	coinbaseTxn := bc.transactionService.CreateCoinbaseTxn(from, "")
 
 	// Verify the signatures on transaction inputs

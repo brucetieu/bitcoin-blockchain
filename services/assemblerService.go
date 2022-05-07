@@ -111,7 +111,7 @@ func (t *txnAssembler) HashTransactions(txns []reps.Transaction) []byte {
 
 	// Now transactions are stored in merkle tree
 	merkleTree := reps.NewMerkleTree(allTxns)
-	
+
 	// Serves as unique identifier for each blocks transactions
 	return merkleTree.Root.Data
 	// hashedTxns := sha256.Sum256(bytes.Join(allTxns, []byte{}))

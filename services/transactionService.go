@@ -431,7 +431,7 @@ func (ts *transactionService) VerifyTransaction(txn reps.Transaction) (bool, err
 	if ts.IsCoinbaseTransaction(txn) {
 		return true, nil
 	}
-	
+
 	prevTxns := make(map[string]reps.Transaction)
 
 	for _, input := range txn.Inputs {
