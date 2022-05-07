@@ -24,7 +24,7 @@ import (
 	// "github.com/google/uuid"
 )
 
-var Reward = 500 // Initial reward miner gets for mining the first block
+var Reward = 50 // Initial reward miner gets for mining the first block
 
 type TransactionService interface {
 	NewTxnOutput(value int, address string) reps.TxnOutput
@@ -82,7 +82,12 @@ func NewTransactionService(blockchainRepo repository.BlockchainRepository, walle
 func (ts *transactionService) CreateCoinbaseTxn(to string, data string) reps.Transaction {
 	log.WithFields(log.Fields{"to": to, "data": data}).Info("Creating coinbase transaction")
 	if data == "" {
-		data = fmt.Sprintf("Coins to: %s", to)
+		randData := make([]byte, 24)
+		_, err := rand.Read(randData)
+		if err != nil {
+			log.Error("error generating random data: ", err.Error())
+		}
+		data = fmt.Sprintf("%x", randData)
 	}
 
 	txnRep := ts.ToCoinbaseTxn(to, data)
@@ -115,7 +120,8 @@ func (ts *transactionService) ToCoinbaseTxn(to string, data string) reps.Transac
 	txnRep.Inputs = []reps.TxnInput{txnIn}
 
 	// Put this here to ensure we get a different hash each time
-	currTxnID := ts.txnAssembler.SetID(txnRep)
+	// currTxnID := ts.txnAssembler.SetID(txnRep)
+	currTxnID := ts.txnAssembler.HashTransaction(txnRep)
 
 	txnRep.ID = currTxnID
 	txnOut.CurrTxnID = currTxnID
@@ -422,6 +428,10 @@ func (ts *transactionService) SignTransaction(txn reps.Transaction, privKey ecds
 
 func (ts *transactionService) VerifyTransaction(txn reps.Transaction) (bool, error) {
 	log.Info("Attempting to verify transaction: ", hex.EncodeToString(txn.ID))
+	if ts.IsCoinbaseTransaction(txn) {
+		return true, nil
+	}
+	
 	prevTxns := make(map[string]reps.Transaction)
 
 	for _, input := range txn.Inputs {
