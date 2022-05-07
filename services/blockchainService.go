@@ -107,8 +107,11 @@ func (bc *blockchainService) AddToBlockChain(from string, to string, amount int)
 		return reps.Block{}, err
 	}
 
+	// Also create a new coinbase transaction 
+	coinbaseTxn := bc.transactionService.CreateCoinbaseTxn(from, "")
+
 	// Verify the signatures on transaction inputs
-	txns := []reps.Transaction{newTxn}
+	txns := []reps.Transaction{coinbaseTxn, newTxn}
 	for _, txn := range txns {
 		verifiedTxn, err := bc.transactionService.VerifyTransaction(txn)
 		if !verifiedTxn {
@@ -118,7 +121,7 @@ func (bc *blockchainService) AddToBlockChain(from string, to string, amount int)
 	}
 
 	// Create a new block with new transaction and persist
-	newBlock, err := bc.blockService.CreateBlock([]reps.Transaction{newTxn}, lastBlock.Hash)
+	newBlock, err := bc.blockService.CreateBlock(txns, lastBlock.Hash)
 	if err != nil {
 		return reps.Block{}, err
 	}

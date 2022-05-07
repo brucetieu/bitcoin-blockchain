@@ -104,12 +104,18 @@ func (t *txnAssembler) HashTransaction(txn reps.Transaction) []byte {
 func (t *txnAssembler) HashTransactions(txns []reps.Transaction) []byte {
 	allTxns := make([][]byte, 0)
 
+	// Create a list of serialized transactions
 	for _, txn := range txns {
-		allTxns = append(allTxns, txn.ID)
+		allTxns = append(allTxns, t.ToTxnBytes(txn))
 	}
 
-	hashedTxns := sha256.Sum256(bytes.Join(allTxns, []byte{}))
-	return hashedTxns[:]
+	// Now transactions are stored in merkle tree
+	merkleTree := reps.NewMerkleTree(allTxns)
+	
+	// Serves as unique identifier for each blocks transactions
+	return merkleTree.Root.Data
+	// hashedTxns := sha256.Sum256(bytes.Join(allTxns, []byte{}))
+	// return hashedTxns[:]
 }
 
 // Create txn id
