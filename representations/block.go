@@ -1,15 +1,13 @@
 package representations
 
-import (
-// "github.com/google/uuid"
-)
-
+// Format of payload when mining a block
 type CreateBlockInput struct {
 	From   string `json:"from" binding:"required"`
 	To     string `json:"to" binding:"required"`
 	Amount int    `json:"amount" binding:"required"`
 }
 
+// Block representation in bitcoin blockchain
 type Block struct {
 	ID           string        `gorm:"primary_key;type:char(36);column:block_id"`
 	Timestamp    int64         `json:"timestamp"`
@@ -18,6 +16,7 @@ type Block struct {
 	Hash         []byte        `json:"hash"`
 	Nounce       int64         `json:"nounce"`
 }
+
 
 type ReadableBlock struct {
 	ID           string                `gorm:"primary_key;type:char(36);column:block_id"`

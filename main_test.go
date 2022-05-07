@@ -1,10 +1,10 @@
-package main
+package main_test
 
 import (
-	"fmt"
 	"testing"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestMain(m *testing.M) {
-	fmt.Println("test")
+func TestMain(t *testing.T) {
+	assert.Equal(t, 1, 1, "1 equals 1")
 }

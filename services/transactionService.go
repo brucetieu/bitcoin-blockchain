@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"math/big"
 	"sort"
-	// "strings"
 
 	"github.com/akamensky/base58"
 	"github.com/brucetieu/blockchain/repository"
@@ -19,9 +18,7 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/crypto/ripemd160"
 
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
-	// "github.com/google/uuid"
 )
 
 var Reward = 50 // Initial reward miner gets for mining the first block
@@ -523,7 +520,7 @@ func (ts *transactionService) VerifySignature(currTxn reps.Transaction, prevTxns
 		rawPubKey := ecdsa.PublicKey{curve, &x, &y}
 
 		// verifies the signature in r, s of hash (txnCopy.ID) using the public key.
-		if ecdsa.Verify(&rawPubKey, txnCopy.ID, &r, &s) == false {
+		if !ecdsa.Verify(&rawPubKey, txnCopy.ID, &r, &s) {
 			return false, fmt.Errorf("Signature: %x could not be verified", in.Signature)
 		}
 	}
@@ -579,7 +576,7 @@ func (ts *transactionService) Lock(output *reps.TxnOutput, address string) {
 
 // checks if provided public key hash was used to lock the output
 func (ts *transactionService) IsLockedWithKey(output reps.TxnOutput, pubKeyHash []byte) bool {
-	return bytes.Compare(output.PubKeyHash, pubKeyHash) == 0
+	return bytes.Equal(output.PubKeyHash, pubKeyHash)
 }
 
 func (ts *transactionService) IsCoinbaseTransaction(txn reps.Transaction) bool {
@@ -592,7 +589,7 @@ func createPubKeyHash(pubKey []byte) ([]byte, error) {
 	ripemdHasher := ripemd160.New()
 	_, err := ripemdHasher.Write(pubHash[:])
 	if err != nil {
-		logrus.Error(err.Error())
+		log.Error(err.Error())
 	}
 
 	pubKeyHash := ripemdHasher.Sum(nil)

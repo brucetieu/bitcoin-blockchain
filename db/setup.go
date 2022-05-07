@@ -24,11 +24,11 @@ func ConnectDatabase() {
 
 	database.Logger.LogMode(logger.Info)
 
-	database.AutoMigrate(&reps.Block{})
-	database.AutoMigrate(&reps.Transaction{})
-	database.AutoMigrate(&reps.TxnInput{})
-	database.AutoMigrate(&reps.TxnOutput{})
-	database.AutoMigrate(&reps.Wallet{})
+	_ = database.AutoMigrate(&reps.Block{})
+	_ = database.AutoMigrate(&reps.Transaction{})
+	_ = database.AutoMigrate(&reps.TxnInput{})
+	_ = database.AutoMigrate(&reps.TxnOutput{})
+	_ = database.AutoMigrate(&reps.Wallet{})
 
 	DB = database
 }
