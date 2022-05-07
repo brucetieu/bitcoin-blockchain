@@ -240,7 +240,7 @@ func (repo *blockchainRepository) GetBlockchain() ([]reps.Block, error) {
 	if err := db.DB.
 		Preload("Transactions").
 		Find(&blocks).Error; err != nil {
-		return []reps.Block{}, nil
+		return []reps.Block{}, err
 	}
 
 	for i := 0; i < len(blocks); i++ {
