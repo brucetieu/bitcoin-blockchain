@@ -1,6 +1,6 @@
 # Bitcoin Blockchain API
 
-A simple REST API developed with Go, Gin, and GORM to mimic operations that may occur on a Bitcoin Blockchain. This includes mining blocks, creating address (or wallets) and creating and viewing transactions. 
+A simple REST API developed with Go, Gin, PostgreSQL, and GORM to mimic operations that may occur on a Bitcoin Blockchain. This includes mining blocks, creating address (or wallets) and creating and viewing transactions. 
 
 The blockchain implementation heavily relies on this blog post: https://jeiwan.net/posts/building-blockchain-in-go-part-1/
 
