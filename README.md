@@ -4,7 +4,7 @@ A simple REST API developed with Go, Gin, and GORM to mimic operations that may 
 
 The blockchain implementation heavily relies on this blog post: https://jeiwan.net/posts/building-blockchain-in-go-part-1/
 
-#### How to run the app
+##### How to run the app
 In the root directory containing the `docker-compose.yml` file, run:
 
 1. `docker-compose down`
@@ -18,7 +18,7 @@ The service will be running on port 5000 by default. To test that the API is hea
 
 `"Blockchain healthy"`
 
-Now, you should be able to make requests to the API. Refer to the [swagger](docs/swagger.yaml) for more information on the available endpoints.
+Now, you should be able to make requests to the API. Refer to the [swagger](docs/swagger.yaml) for more information on the available endpoints, or visit `localhost:5000/swagger/index.html` once the service is running.
 
 Alternatively, if you have [docker hub](https://hub.docker.com/), you may pull the image from docker and run it as a container with the following commands
 
@@ -26,7 +26,7 @@ Alternatively, if you have [docker hub](https://hub.docker.com/), you may pull t
 2. `docker run brucetieu/blockchain`
 
 
-#### How to access the Postgres CLI (psql) inside of the running Postgres container
+##### How to access the Postgres CLI (psql) inside of the running Postgres container
 In this project we use a postgres container for data persistence. In another terminal, run the following commands:
 
 1. ```docker ps```
