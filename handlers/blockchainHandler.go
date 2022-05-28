@@ -22,19 +22,28 @@ func NewBlockchainHandler(blockchainService services.BlockchainService) *Blockch
 	}
 }
 
-func (bch *BlockchainHandler) BlockchainHome(c *gin.Context) {
+func (bch *BlockchainHandler) BlockchainHome(ctx *gin.Context) {
 	log.Info("Checking if blockchain is up...")
-	c.JSON(http.StatusOK, "Blockchain healthy")
+	ctx.JSON(http.StatusOK, "Blockchain healthy")
 }
 
-func (bch *BlockchainHandler) CreateBlockchain(c *gin.Context) {
+// CreateBlockchain ... Create the blockchain
+// @Summary      Create the blockchain
+// @Description  Create a blockchain by mining the genesis block
+// @Tags         Blocks
+// @Param        BlockchainInput  body      representations.CreateBlockchainInput  true  "Create Blockchain"
+// @Success      201              {object}  representations.ReadableBlock
+// @Success      200              {object}  representations.ReadableBlock
+// @Failure      404              {object}  HTTPError
+// @Router       /blockchain [post]
+func (bch *BlockchainHandler) CreateBlockchain(ctx *gin.Context) {
 	log.Info("Creating Blockchain")
 
 	// Validate input
 	var input reps.CreateBlockchainInput
-	if err := c.ShouldBindJSON(&input); err != nil {
+	if err := ctx.ShouldBindJSON(&input); err != nil {
 		log.WithField("error", err.Error()).Error("Error validating input: ", utils.Pretty(input))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		NewError(ctx, http.StatusBadRequest, err)
 		return
 	}
 
@@ -42,7 +51,7 @@ func (bch *BlockchainHandler) CreateBlockchain(c *gin.Context) {
 	decodedGenesis, exists, err := bch.blockchainService.CreateBlockchain(input.To)
 	if err != nil {
 		log.WithField("error", err.Error()).Error("Error creating blockchain")
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		NewError(ctx, http.StatusNotFound, err)
 		return
 	}
 
@@ -50,17 +59,26 @@ func (bch *BlockchainHandler) CreateBlockchain(c *gin.Context) {
 	data := bch.assemblerService.ToReadableBlock(decodedGenesis)
 
 	if exists {
-		c.JSON(http.StatusOK, gin.H{"message": "Blockchain already exists."})
+		ctx.JSON(http.StatusOK, gin.H{"message": "Blockchain already exists."})
 	} else {
-		c.JSON(http.StatusCreated, gin.H{"block": data, "message": "Blockchain created."})
+		ctx.JSON(http.StatusCreated, gin.H{"block": data, "message": "Blockchain created."})
 	}
 }
 
-func (bch *BlockchainHandler) AddToBlockchain(c *gin.Context) {
+// AddToBlockchain ... Mine or add a block to the blockchain
+// @Summary      Add a block
+// @Description  Add a block to the end of the blockchain
+// @Tags         Blocks
+// @Param        BlockInput  body      representations.CreateBlockInput  true  "Mine block"
+// @Success      201         {object}  representations.ReadableBlock
+// @Failure      400         {object}  HTTPError
+// @Failure      500         {object}  HTTPError
+// @Router       /blockchain/block [post]
+func (bch *BlockchainHandler) AddToBlockchain(ctx *gin.Context) {
 	// Validate input
 	var input reps.CreateBlockInput
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := ctx.ShouldBindJSON(&input); err != nil {
+		NewError(ctx, http.StatusBadRequest, err)
 		return
 	}
 
@@ -70,23 +88,29 @@ func (bch *BlockchainHandler) AddToBlockchain(c *gin.Context) {
 	newBlock, err := bch.blockchainService.AddToBlockChain(input.From, input.To, input.Amount)
 	if err != nil {
 		log.WithField("error", err.Error()).Error("Error adding block")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		NewError(ctx, http.StatusInternalServerError, err)
 		return
 	}
 
 	// Format return data to be readable
 	data := bch.assemblerService.ToReadableBlock(newBlock)
 
-	c.JSON(http.StatusCreated, gin.H{"block": data})
+	ctx.JSON(http.StatusCreated, gin.H{"block": data})
 }
 
-// Print out all blocks in blockchain
-func (bch *BlockchainHandler) GetBlockchain(c *gin.Context) {
+// GetBlockchain ... Print out all blocks in blockchain
+// @Summary      Get all blocks
+// @Description  Get all blocks on the blockchain
+// @Tags         Blocks
+// @Success      200  {array}   representations.ReadableBlock
+// @Failure      500  {object}  HTTPError
+// @Router       /blockchain [get]
+func (bch *BlockchainHandler) GetBlockchain(ctx *gin.Context) {
 	log.Info("Printing out the Blockchain")
 	blockchain, err := bch.blockchainService.GetBlockchain()
 	if err != nil {
 		log.WithField("error", err.Error()).Error("Error getting blockchain")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		NewError(ctx, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -96,45 +120,64 @@ func (bch *BlockchainHandler) GetBlockchain(c *gin.Context) {
 		data = append(data, bch.assemblerService.ToReadableBlock(block))
 	}
 
-	c.JSON(http.StatusOK, gin.H{"blockchain": data})
+	ctx.JSON(http.StatusOK, gin.H{"blockchain": data})
 }
 
-// Get the first block in block chain
-func (bch *BlockchainHandler) GetGenesisBlock(c *gin.Context) {
+// GetGenesisBlock ... Get the genesis block
+// @Summary      Get the genesis block
+// @Description  Get the genesis block on the blockchain
+// @Tags         Blocks
+// @Success      200  {object}  representations.ReadableBlock
+// @Failure      404  {object}  HTTPError
+// @Router       /blockchain/block/genesis [get]
+func (bch *BlockchainHandler) GetGenesisBlock(ctx *gin.Context) {
 	log.Info("Getting Genesis block")
 	genesis, err := bch.blockchainService.GetGenesisBlock()
 	if err != nil {
 		log.WithField("error", err.Error()).Error("Error getting genesis block")
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		NewError(ctx, http.StatusNotFound, err)
 	} else {
 		formattedGenesis := bch.assemblerService.ToReadableBlock(genesis)
-		c.JSON(http.StatusOK, gin.H{"genesis": formattedGenesis})
+		ctx.JSON(http.StatusOK, gin.H{"genesis": formattedGenesis})
 	}
 }
 
-// Get a block given a blockId
-func (bch *BlockchainHandler) GetBlock(c *gin.Context) {
-	blockId := c.Param("blockId")
+// GetBlock ... Get block by block ID
+// @Summary      Get a block
+// @Description  Get a block on the blockchain by block ID
+// @Tags         Blocks
+// @Param        blockId  path      string  true  "Block ID"  
+// @Success      200      {object}  representations.ReadableBlock
+// @Failure      404      {object}  HTTPError
+// @Router       /blockchain/block/{blockId} [get]
+func (bch *BlockchainHandler) GetBlock(ctx *gin.Context) {
+	blockId := ctx.Param("blockId")
 	log.Info("Getting block with blockId: ", blockId)
 
 	block, err := bch.blockchainService.GetBlock(blockId)
 	if err != nil {
 		log.WithField("error", err.Error()).Error("Error getting block")
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		NewError(ctx, http.StatusNotFound, err)
 	} else {
-		c.JSON(http.StatusOK, gin.H{"block": bch.assemblerService.ToReadableBlock(block)})
+		ctx.JSON(http.StatusOK, gin.H{"block": bch.assemblerService.ToReadableBlock(block)})
 	}
 }
 
-// Get last block in blockchain. If it's a genesis, it will return it.
-func (bch *BlockchainHandler) GetLastBlock(c *gin.Context) {
+// GetLastBlock ... Get last block in blockchain. If it's a genesis, it will return it.
+// @Summary      Get the last block
+// @Description  Get the last block on the blockchain
+// @Tags         Blocks
+// @Success      200  {object}  representations.ReadableBlock
+// @Failure      404  {object}  HTTPError
+// @Router       /blockchain/block/last [get]
+func (bch *BlockchainHandler) GetLastBlock(ctx *gin.Context) {
 	log.Info("Getting last block...")
 
 	lastBlock, err := bch.blockchainService.GetLastBlock()
 	if err != nil {
 		log.WithField("error", err.Error()).Error("Error getting last block")
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		NewError(ctx, http.StatusNotFound, err)
 	} else {
-		c.JSON(http.StatusOK, gin.H{"block": bch.assemblerService.ToReadableBlock(lastBlock)})
+		ctx.JSON(http.StatusOK, gin.H{"block": bch.assemblerService.ToReadableBlock(lastBlock)})
 	}
 }

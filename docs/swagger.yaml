@@ -1,0 +1,356 @@
+basePath: /bitcoin
+definitions:
+  handlers.HTTPError:
+    properties:
+      code:
+        example: 400
+        type: integer
+      message:
+        example: status bad request
+        type: string
+    type: object
+  representations.AddressBalance:
+    properties:
+      address:
+        type: string
+      balance:
+        type: integer
+      publicKey:
+        type: string
+    type: object
+  representations.CreateBlockInput:
+    properties:
+      amount:
+        type: integer
+      from:
+        type: string
+      to:
+        type: string
+    required:
+    - amount
+    - from
+    - to
+    type: object
+  representations.CreateBlockchainInput:
+    properties:
+      to:
+        type: string
+    required:
+    - to
+    type: object
+  representations.ReadableBlock:
+    properties:
+      hash:
+        type: string
+      id:
+        type: string
+      nounce:
+        type: integer
+      prevHash:
+        type: string
+      timestamp:
+        type: integer
+      transactions:
+        items:
+          $ref: '#/definitions/representations.ReadableTransaction'
+        type: array
+    type: object
+  representations.ReadableTransaction:
+    properties:
+      blockId:
+        type: string
+      id:
+        type: string
+      txnInputs:
+        items:
+          $ref: '#/definitions/representations.ReadableTxnInput'
+        type: array
+      txnOutputs:
+        items:
+          $ref: '#/definitions/representations.ReadableTxnOutput'
+        type: array
+    type: object
+  representations.ReadableTxnInput:
+    properties:
+      currTxnId:
+        type: string
+      outIdx:
+        type: integer
+      prevTxnId:
+        type: string
+      pubKey:
+        type: string
+      signature:
+        type: string
+    type: object
+  representations.ReadableTxnOutput:
+    properties:
+      currTxnId:
+        type: string
+      pubKeyHash:
+        type: string
+      value:
+        type: integer
+    type: object
+  representations.Wallet:
+    properties:
+      address:
+        type: string
+      id:
+        type: string
+      privateKey:
+        items:
+          type: integer
+        type: array
+      publicKey:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: This is a Bitcoin Blockchain API
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  title: Bitcoin Blockchain API documentation
+  version: 1.0.0
+paths:
+  /blockchain:
+    get:
+      description: Get all blocks on the blockchain
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/representations.ReadableBlock'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.HTTPError'
+      summary: Get all blocks
+      tags:
+      - Blocks
+    post:
+      description: Create a blockchain by mining the genesis block
+      parameters:
+      - description: Create Blockchain
+        in: body
+        name: BlockchainInput
+        required: true
+        schema:
+          $ref: '#/definitions/representations.CreateBlockchainInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/representations.ReadableBlock'
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/representations.ReadableBlock'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.HTTPError'
+      summary: Create the blockchain
+      tags:
+      - Blocks
+  /blockchain/block:
+    post:
+      description: Add a block to the end of the blockchain
+      parameters:
+      - description: Mine block
+        in: body
+        name: BlockInput
+        required: true
+        schema:
+          $ref: '#/definitions/representations.CreateBlockInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/representations.ReadableBlock'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.HTTPError'
+      summary: Add a block
+      tags:
+      - Blocks
+  /blockchain/block/{blockId}:
+    get:
+      description: Get a block on the blockchain by block ID
+      parameters:
+      - description: Block ID
+        in: path
+        name: blockId
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/representations.ReadableBlock'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.HTTPError'
+      summary: Get a block
+      tags:
+      - Blocks
+  /blockchain/block/genesis:
+    get:
+      description: Get the genesis block on the blockchain
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/representations.ReadableBlock'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.HTTPError'
+      summary: Get the genesis block
+      tags:
+      - Blocks
+  /blockchain/block/last:
+    get:
+      description: Get the last block on the blockchain
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/representations.ReadableBlock'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.HTTPError'
+      summary: Get the last block
+      tags:
+      - Blocks
+  /blockchain/transactions:
+    get:
+      description: Get all transactions that exist on the blockchain
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/representations.ReadableTransaction'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.HTTPError'
+      summary: Get all transactions
+      tags:
+      - Transactions
+  /blockchain/transactions/{transactionId}:
+    get:
+      description: Get a transaction on the blockchain
+      parameters:
+      - description: Transaction ID
+        in: path
+        name: transactionId
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/representations.ReadableTransaction'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.HTTPError'
+      summary: Get a transaction
+      tags:
+      - Transactions
+  /blockchain/wallets:
+    get:
+      description: Get all wallets
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/representations.Wallet'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.HTTPError'
+      summary: Get all wallets
+      tags:
+      - Wallets
+    post:
+      description: Create a wallet to store an address and public / private key information
+      responses:
+        "201":
+          description: address
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.HTTPError'
+      summary: Create a wallet
+      tags:
+      - Wallets
+  /blockchain/wallets/{address}:
+    get:
+      description: Get a wallet by address
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/representations.Wallet'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.HTTPError'
+      summary: Get a wallet
+      tags:
+      - Wallets
+  /blockchain/wallets/{address}/balance:
+    get:
+      description: Get the coin balance for an address on the blockchain
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: integer
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.HTTPError'
+      summary: Get coin balance
+      tags:
+      - Wallets
+  /blockchain/wallets/balances:
+    get:
+      description: Get the coin balances for each address on the blockchain
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/representations.AddressBalance'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.HTTPError'
+      summary: Get coin balances
+      tags:
+      - Wallets
+swagger: "2.0"

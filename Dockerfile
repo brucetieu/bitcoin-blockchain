@@ -9,6 +9,6 @@ WORKDIR /app
 RUN go clean --modcache
 RUN go build -o main .
 
-EXPOSE 8080
+EXPOSE 5000
 
 CMD ["/app/main"]
