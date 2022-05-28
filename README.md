@@ -4,7 +4,7 @@ A simple REST API developed with Go, Gin, and GORM to mimic operations that may 
 
 The blockchain implementation heavily relies on this blog post: https://jeiwan.net/posts/building-blockchain-in-go-part-1/
 
-##### How to run the app
+### How to run the app
 In the root directory containing the `docker-compose.yml` file, run:
 
 1. `docker-compose down`
@@ -26,7 +26,7 @@ Alternatively, if you have [docker hub](https://hub.docker.com/), you may pull t
 2. `docker run brucetieu/blockchain`
 
 
-##### How to access the Postgres CLI (psql) inside of the running Postgres container
+### How to access the Postgres CLI (psql) inside of the running Postgres container
 In this project we use a postgres container for data persistence. In another terminal, run the following commands:
 
 1. ```docker ps```
