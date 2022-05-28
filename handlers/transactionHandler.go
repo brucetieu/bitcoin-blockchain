@@ -60,7 +60,7 @@ func (th *TransactionHandler) GetTransaction(ctx *gin.Context) {
 }
 
 // GetBalances ... Get the coin balance for each address on the blockchain
-// @Summary      Get coin balances 
+// @Summary      Get coin balances
 // @Description  Get the coin balances for each address on the blockchain
 // @Tags         Wallets
 // @Success      200  {array}   representations.AddressBalance
@@ -82,8 +82,8 @@ func (th *TransactionHandler) GetBalances(ctx *gin.Context) {
 // @Summary      Get coin balance
 // @Description  Get the coin balance for an address on the blockchain
 // @Tags         Wallets
-// @Success      200  {integer}  integer    
-// @Failure      404  {object}   HTTPError  
+// @Success      200  {integer}  integer
+// @Failure      404  {object}   HTTPError
 // @Router       /blockchain/wallets/{address}/balance [get]
 func (th *TransactionHandler) GetBalance(ctx *gin.Context) {
 	log.Info("GetBalances called")

@@ -22,8 +22,8 @@ func NewWalletHandler(walletService services.WalletService) *WalletHandler {
 // @Summary      Create a wallet
 // @Description  Create a wallet to store an address and public / private key information
 // @Tags         Wallets
-// @Success      201  {string}  string     "address"  
-// @Failure      404  {object}  HTTPError  
+// @Success      201  {string}  string     "address"
+// @Failure      404  {object}  HTTPError
 // @Router       /blockchain/wallets [post]
 func (wh *WalletHandler) CreateWallet(ctx *gin.Context) {
 	log.Info("CreateWallet handler called")
@@ -42,7 +42,7 @@ func (wh *WalletHandler) CreateWallet(ctx *gin.Context) {
 // @Description  Get a wallet by address
 // @Tags         Wallets
 // @Success      200  {object}  representations.Wallet
-// @Failure      404  {object}  HTTPError  
+// @Failure      404  {object}  HTTPError
 // @Router       /blockchain/wallets/{address} [get]
 func (wh *WalletHandler) GetWallet(ctx *gin.Context) {
 	address := ctx.Param("address")
@@ -66,7 +66,7 @@ func (wh *WalletHandler) GetWallet(ctx *gin.Context) {
 // @Description  Get all wallets
 // @Tags         Wallets
 // @Success      200  {array}   representations.Wallet
-// @Failure      500  {object}  HTTPError  
+// @Failure      500  {object}  HTTPError
 // @Router       /blockchain/wallets [get]
 func (wh *WalletHandler) GetWallets(ctx *gin.Context) {
 	log.Info("GetWallets handler called")

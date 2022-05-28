@@ -146,7 +146,7 @@ func (bch *BlockchainHandler) GetGenesisBlock(ctx *gin.Context) {
 // @Summary      Get a block
 // @Description  Get a block on the blockchain by block ID
 // @Tags         Blocks
-// @Param        blockId  path      string  true  "Block ID"  
+// @Param        blockId  path      string  true  "Block ID"
 // @Success      200      {object}  representations.ReadableBlock
 // @Failure      404      {object}  HTTPError
 // @Router       /blockchain/block/{blockId} [get]
