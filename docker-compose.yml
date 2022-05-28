@@ -7,7 +7,7 @@ services:
     # This is used to build the Dockerfile when "docker-compose up" is ran
     build: .
     ports: 
-      - 8080:8080
+      - 5000:5000
     restart: on-failure
     volumes:
       - api:/usr/src/app/

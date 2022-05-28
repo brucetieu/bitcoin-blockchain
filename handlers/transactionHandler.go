@@ -20,51 +20,80 @@ func NewTransactionHandler(transactionService services.TransactionService) *Tran
 	}
 }
 
-func (th *TransactionHandler) GetTransactions(c *gin.Context) {
+// GetTransactions ... Get all transactions on the blockchain
+// @Summary      Get all transactions
+// @Description  Get all transactions that exist on the blockchain
+// @Tags         Transactions
+// @Success      200  {array}   representations.ReadableTransaction
+// @Failure      500  {object}  HTTPError
+// @Router       /blockchain/transactions [get]
+func (th *TransactionHandler) GetTransactions(ctx *gin.Context) {
 	log.Info("GetTransactions called")
 	txns, err := th.transactionService.GetTransactions()
 	if err != nil {
 		log.Error("error getting transactions: ", err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		NewError(ctx, http.StatusInternalServerError, err)
 	} else {
-		c.JSON(http.StatusOK, gin.H{"transactions": th.assemblerService.ToReadableTransactions(txns)})
+		ctx.JSON(http.StatusOK, gin.H{"transactions": th.assemblerService.ToReadableTransactions(txns)})
 	}
 }
 
-func (th *TransactionHandler) GetTransaction(c *gin.Context) {
-	txnId := c.Param("transactionId")
+// GetTransactions ... Get a single transaction
+// @Summary      Get a transaction
+// @Description  Get a transaction on the blockchain
+// @Tags         Transactions
+// @Param        transactionId  path      string  true  "Transaction ID"
+// @Success      200            {object}  representations.ReadableTransaction
+// @Failure      404            {object}  HTTPError
+// @Router       /blockchain/transactions/{transactionId} [get]
+func (th *TransactionHandler) GetTransaction(ctx *gin.Context) {
+	txnId := ctx.Param("transactionId")
 	log.Info("GetTransaction called with transactionId: " + txnId)
 
 	txn, err := th.transactionService.GetTransaction(txnId)
 	if err != nil {
 		log.Error("error getting transaction: ", err.Error())
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		NewError(ctx, http.StatusNotFound, err)
 	} else {
-		c.JSON(http.StatusOK, gin.H{"transaction": th.assemblerService.ToReadableTransaction(txn)})
+		ctx.JSON(http.StatusOK, gin.H{"transaction": th.assemblerService.ToReadableTransaction(txn)})
 	}
 }
 
-func (th *TransactionHandler) GetBalances(c *gin.Context) {
+// GetBalances ... Get the coin balance for each address on the blockchain
+// @Summary      Get coin balances
+// @Description  Get the coin balances for each address on the blockchain
+// @Tags         Wallets
+// @Success      200  {array}   representations.AddressBalance
+// @Failure      404  {object}  HTTPError
+// @Router       /blockchain/wallets/balances [get]
+func (th *TransactionHandler) GetBalances(ctx *gin.Context) {
 	log.Info("GetBalances called")
 
 	balances, err := th.transactionService.GetBalances()
 	if err != nil {
 		log.Error("error getting transaction: ", err.Error())
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		NewError(ctx, http.StatusNotFound, err)
 	} else {
-		c.JSON(http.StatusOK, gin.H{"balances": balances})
+		ctx.JSON(http.StatusOK, gin.H{"balances": balances})
 	}
 }
 
-func (th *TransactionHandler) GetBalance(c *gin.Context) {
+// GetBalances ... Get the coin balance for a single address on the blockchain
+// @Summary      Get coin balance
+// @Description  Get the coin balance for an address on the blockchain
+// @Tags         Wallets
+// @Success      200  {integer}  integer
+// @Failure      404  {object}   HTTPError
+// @Router       /blockchain/wallets/{address}/balance [get]
+func (th *TransactionHandler) GetBalance(ctx *gin.Context) {
 	log.Info("GetBalances called")
-	address := c.Param("address")
+	address := ctx.Param("address")
 
 	balance, err := th.transactionService.GetBalance(address)
 	if err != nil {
 		log.Error("error getting transaction: ", err.Error())
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		NewError(ctx, http.StatusNotFound, err)
 	} else {
-		c.JSON(http.StatusOK, gin.H{"balance": balance})
+		ctx.JSON(http.StatusOK, gin.H{"balance": balance})
 	}
 }
