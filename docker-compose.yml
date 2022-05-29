@@ -7,7 +7,7 @@ services:
     # This is used to build the Dockerfile when "docker-compose up" is ran
     build: .
     ports: 
-      - 5000:5000
+      - ${PORT}:${PORT}
     restart: on-failure
     volumes:
       - api:/usr/src/app/
@@ -21,11 +21,11 @@ services:
     image: postgres:14
     restart: always
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=pass
-      - POSTGRES_DB=blockchain
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}  # default = postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-pass} # default = pass
+      - POSTGRES_DB=${POSTGRES_DB:-blockchain} # default = blockchain
     ports:
-      - 5432:5432
+      - 5435:5432
     volumes:
       - db:/var/lib/postgresql/data 
     networks:
